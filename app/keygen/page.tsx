@@ -21,23 +21,35 @@ export default function KeyGenPage() {
   const [checkingAuth, setCheckingAuth] = useState(true);
 
   useEffect(() => {
-    // Check admin access (optional - API will also check)
+    // Check admin access - redirect to auth if not logged in
     const checkAdmin = async () => {
       try {
         const user = await getAuthUser();
         if (!user) {
-          // Not logged in - still allow access, API will handle auth
-          setCheckingAuth(false);
+          // Not logged in - redirect to auth
+          router.push("/auth");
           return;
         }
-        // Logged in - allow access, API will verify admin
+
+        // Check if user is admin
+        const adminEmail = process.env.NEXT_PUBLIC_ADMIN_EMAIL || process.env.ADMIN_EMAIL || "";
+        const adminEmailsEnv = process.env.NEXT_PUBLIC_ADMIN_EMAILS || process.env.ADMIN_EMAILS;
+        const adminEmails = adminEmailsEnv ? adminEmailsEnv.split(",").map(e => e.trim()) : (adminEmail ? [adminEmail] : ["truongthanh160588@gmail.com"]);
+
+        if (!user.email || !adminEmails.includes(user.email)) {
+          // Not admin - redirect to home
+          router.push("/");
+          return;
+        }
+
+        // Admin - allow access
         setCheckingAuth(false);
       } catch {
-        setCheckingAuth(false);
+        router.push("/auth");
       }
     };
     checkAdmin();
-  }, []);
+  }, [router]);
 
   const handleGenerate = async () => {
     if (!deviceId.trim()) {
