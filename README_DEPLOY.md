@@ -27,11 +27,13 @@ Trong Vercel Dashboard → Project Settings → Environment Variables, thêm:
 #### Bắt buộc (Production)
 
 ```env
-# Admin Email
+# Admin Email (dùng cho /admin/*)
 ADMIN_EMAIL=truongthanh160588@gmail.com
 NEXT_PUBLIC_ADMIN_EMAILS=truongthanh160588@gmail.com
 
 # Activation System (QUAN TRỌNG - bảo mật)
+# Phải là chuỗi bí mật dài (tối thiểu 32 ký tự)
+# Nếu thay đổi → tất cả key cũ sẽ không hoạt động
 ACTIVATION_SECRET=your-secret-key-min-32-chars-here
 ```
 
@@ -71,15 +73,15 @@ SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
 
 ## 🔐 Truy cập Admin
 
-Sau khi deploy, truy cập các trang admin:
+Sau khi deploy, truy cập các trang admin (cần đăng nhập với email: `truongthanh160588@gmail.com`):
 
 - **Key Generator**: `/admin/keygen`
   - Tạo Activation Key cho học viên
-  - Cần đăng nhập với email: `truongthanh160588@gmail.com`
+  - Nhập Device ID từ học viên → Generate → Copy key gửi lại
 
 - **Quản lý đơn hàng**: `/admin/purchases`
   - Duyệt đơn hàng từ học viên
-  - Cần đăng nhập với email admin
+  - Xem danh sách pending → Bấm "Đã thanh toán" để kích hoạt
 
 ## 🛠️ Troubleshooting
 
@@ -123,22 +125,41 @@ Sau khi deploy, truy cập các trang admin:
 2. Push file lên GitHub
 3. Redeploy
 
+### Lỗi: "ACTIVATION_SECRET not configured" khi verify key
+
+**Nguyên nhân**: Chưa set `ACTIVATION_SECRET` trong Vercel ENV
+
+**Giải pháp**:
+1. Vào Vercel Dashboard → Project Settings → Environment Variables
+2. Thêm `ACTIVATION_SECRET` với giá trị bất kỳ (tối thiểu 32 ký tự)
+3. **Redeploy** project (quan trọng - ENV chỉ áp dụng sau khi redeploy)
+
 ## 📝 Lưu ý quan trọng
 
 1. **ACTIVATION_SECRET**: 
    - Phải giữ bí mật, không commit vào Git
    - Nên dùng chuỗi ngẫu nhiên dài (ví dụ: `openssl rand -hex 32`)
    - Nếu thay đổi → tất cả key cũ sẽ không hoạt động
+   - **QUAN TRỌNG**: Sau khi set ENV trong Vercel, phải **Redeploy** để áp dụng
 
 2. **ADMIN_EMAIL**:
-   - Email này dùng để check quyền admin
+   - Email này dùng để check quyền admin tại `/admin/*`
+   - Email mặc định: `truongthanh160588@gmail.com`
    - Có thể set nhiều email: `email1@gmail.com,email2@gmail.com`
+   - Set trong `ADMIN_EMAIL` hoặc `NEXT_PUBLIC_ADMIN_EMAILS`
 
-3. **PWA**:
+3. **Device ID & Activation**:
+   - Device ID tự động tạo và lưu localStorage
+   - Activation state lưu localStorage: `hatg_activation_v1`
+   - Chưa activated → không cho vào `/learn/*`
+   - Admin generate key tại `/admin/keygen`
+
+4. **PWA**:
    - PWA chỉ hoạt động đầy đủ trên HTTPS (Vercel tự động có)
    - Test trên mobile: mở URL Vercel → "Add to Home Screen"
+   - Service Worker tự động register
 
-4. **Custom Domain**:
+5. **Custom Domain**:
    - Vercel cho phép thêm custom domain miễn phí
    - Vào Project Settings → Domains → Add Domain
 

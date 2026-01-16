@@ -21,7 +21,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const secret = process.env.ACTIVATION_SECRET;
+    // Read secret with fallback order
+    const secret = process.env.ACTIVATION_SECRET || process.env.NEXT_PUBLIC_ACTIVATION_SECRET || "";
     if (!secret) {
       // In production, log but don't expose details
       if (process.env.NODE_ENV === "production") {

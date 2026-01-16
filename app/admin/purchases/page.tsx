@@ -19,11 +19,12 @@ export default function AdminPurchasesPage() {
     message: "",
     type: "success",
   });
+  const [currentUserEmail, setCurrentUserEmail] = useState<string>("");
 
-  // Get admin email from env, fallback to default
-  const adminEmail = process.env.NEXT_PUBLIC_ADMIN_EMAIL || "truongthanh160588@gmail.com";
-  const adminEmailsEnv = process.env.NEXT_PUBLIC_ADMIN_EMAILS;
-  const adminEmails = adminEmailsEnv ? adminEmailsEnv.split(",").map(e => e.trim()) : [adminEmail];
+  // Get admin email from env with fallback order
+  const adminEmail = process.env.NEXT_PUBLIC_ADMIN_EMAIL || process.env.ADMIN_EMAIL || "";
+  const adminEmailsEnv = process.env.NEXT_PUBLIC_ADMIN_EMAILS || process.env.ADMIN_EMAILS;
+  const adminEmails = adminEmailsEnv ? adminEmailsEnv.split(",").map(e => e.trim()) : (adminEmail ? [adminEmail] : ["truongthanh160588@gmail.com"]);
 
   useEffect(() => {
     checkAdmin();
@@ -36,6 +37,8 @@ export default function AdminPurchasesPage() {
       router.push("/auth");
       return;
     }
+
+    setCurrentUserEmail(user.email);
 
     if (!adminEmails.includes(user.email)) {
       router.push("/courses");
@@ -135,6 +138,13 @@ export default function AdminPurchasesPage() {
   return (
     <>
       <div className="max-w-6xl mx-auto">
+        {/* Admin Badge */}
+        {currentUserEmail && (
+          <div className="mb-4 text-right">
+            <span className="text-xs text-gray-500">Admin: {currentUserEmail}</span>
+          </div>
+        )}
+        
         <div className="mb-8">
           <h1 className="text-3xl font-bold mb-2">Quản lý đơn hàng</h1>
           <p className="text-gray-400">

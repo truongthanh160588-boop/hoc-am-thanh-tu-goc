@@ -27,10 +27,10 @@ export async function POST(request: NextRequest) {
         const supabase = await createClient();
         const { data: { user } } = await supabase.auth.getUser();
         
-        // Get admin email from env, fallback to default
-        const adminEmail = process.env.ADMIN_EMAIL || process.env.NEXT_PUBLIC_ADMIN_EMAIL || "truongthanh160588@gmail.com";
+        // Get admin email from env with fallback order
+        const adminEmail = process.env.ADMIN_EMAIL || process.env.NEXT_PUBLIC_ADMIN_EMAIL || "";
         const adminEmailsEnv = process.env.ADMIN_EMAILS || process.env.NEXT_PUBLIC_ADMIN_EMAILS;
-        const adminEmails = adminEmailsEnv ? adminEmailsEnv.split(",").map(e => e.trim()) : [adminEmail];
+        const adminEmails = adminEmailsEnv ? adminEmailsEnv.split(",").map(e => e.trim()) : (adminEmail ? [adminEmail] : ["truongthanh160588@gmail.com"]);
         
         if (user && user.email && adminEmails.includes(user.email)) {
           isAdmin = true;
@@ -57,7 +57,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const secret = process.env.ACTIVATION_SECRET;
+    // Read secret with fallback order
+    const secret = process.env.ACTIVATION_SECRET || process.env.NEXT_PUBLIC_ACTIVATION_SECRET || "";
     if (!secret) {
       // In production, log but don't expose details
       if (process.env.NODE_ENV === "production") {

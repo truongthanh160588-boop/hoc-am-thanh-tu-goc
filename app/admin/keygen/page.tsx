@@ -31,10 +31,10 @@ export default function KeyGenPage() {
       return;
     }
 
-    // Get admin email from env, fallback to default
-    const adminEmail = process.env.NEXT_PUBLIC_ADMIN_EMAIL || "truongthanh160588@gmail.com";
-    const adminEmailsEnv = process.env.NEXT_PUBLIC_ADMIN_EMAILS;
-    const adminEmails = adminEmailsEnv ? adminEmailsEnv.split(",").map(e => e.trim()) : [adminEmail];
+    // Get admin email from env with fallback order
+    const adminEmail = process.env.NEXT_PUBLIC_ADMIN_EMAIL || process.env.ADMIN_EMAIL || "";
+    const adminEmailsEnv = process.env.NEXT_PUBLIC_ADMIN_EMAILS || process.env.ADMIN_EMAILS;
+    const adminEmails = adminEmailsEnv ? adminEmailsEnv.split(",").map(e => e.trim()) : (adminEmail ? [adminEmail] : ["truongthanh160588@gmail.com"]);
 
     if (!authUser.email || !adminEmails.includes(authUser.email)) {
       router.push("/");
@@ -100,6 +100,13 @@ export default function KeyGenPage() {
     <>
       <div className="min-h-screen bg-titan-bg py-8">
         <div className="container mx-auto px-4 max-w-2xl">
+          {/* Admin Badge */}
+          {user && (
+            <div className="mb-4 text-right">
+              <span className="text-xs text-gray-500">Admin: {user.email}</span>
+            </div>
+          )}
+          
           <div className="mb-8 text-center">
             <h1 className="text-3xl font-bold mb-2 bg-gradient-to-r from-gray-200 to-cyan-400 bg-clip-text text-transparent">
               Key Generator
