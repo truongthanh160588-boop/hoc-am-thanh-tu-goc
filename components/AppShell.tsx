@@ -63,8 +63,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const isAuthPage = pathname === "/auth";
   const isLandingPage = pathname === "/";
   const isKeyGenPage = pathname === "/keygen";
+  const isPreviewPage = pathname === "/preview";
 
-  if (isAuthPage || isLandingPage || isKeyGenPage) {
+  if (isAuthPage || isLandingPage || isKeyGenPage || isPreviewPage) {
     return <>{children}</>;
   }
 
