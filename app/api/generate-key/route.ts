@@ -25,18 +25,28 @@ export async function POST(request: NextRequest) {
       try {
         const { createClient } = await import("@/lib/supabase/server");
         const supabase = await createClient();
-        const { data: { user } } = await supabase.auth.getUser();
+        const { data: { user }, error: userError } = await supabase.auth.getUser();
+        
+        if (userError) {
+          console.error("[GENERATE-KEY] Error getting user:", userError);
+        }
         
         // Get admin email from env with fallback order
         const adminEmail = process.env.ADMIN_EMAIL || process.env.NEXT_PUBLIC_ADMIN_EMAIL || "";
         const adminEmailsEnv = process.env.ADMIN_EMAILS || process.env.NEXT_PUBLIC_ADMIN_EMAILS;
         const adminEmails = adminEmailsEnv ? adminEmailsEnv.split(",").map(e => e.trim()) : (adminEmail ? [adminEmail] : ["truongthanh160588@gmail.com"]);
         
-        if (user && user.email && adminEmails.includes(user.email)) {
-          isAdmin = true;
+        if (user && user.email) {
+          console.log("[GENERATE-KEY] User email:", user.email, "Admin emails:", adminEmails);
+          if (adminEmails.includes(user.email)) {
+            isAdmin = true;
+          }
+        } else {
+          console.log("[GENERATE-KEY] No user found in session");
         }
-      } catch {
+      } catch (error: any) {
         // Supabase not available, skip
+        console.error("[GENERATE-KEY] Supabase error:", error);
       }
     }
     

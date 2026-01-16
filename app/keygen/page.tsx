@@ -67,6 +67,7 @@ export default function KeyGenPage() {
         headers: {
           "Content-Type": "application/json",
         },
+        credentials: "include", // Đảm bảo gửi cookies
         body: JSON.stringify({
           deviceId: deviceId.trim(),
           courseId,
