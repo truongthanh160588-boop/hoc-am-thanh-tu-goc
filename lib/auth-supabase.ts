@@ -15,7 +15,8 @@ export async function signInWithOTP(email: string) {
   const { error } = await supabase.auth.signInWithOtp({
     email,
     options: {
-      emailRedirectTo: `${window.location.origin}/auth/callback`,
+      shouldCreateUser: true,
+      // ⚠️ KHÔNG dùng emailRedirectTo → sẽ gửi Magic Link thay vì mã 6 số
     },
   });
   return { error };
