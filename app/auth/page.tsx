@@ -54,6 +54,7 @@ export default function AuthPage() {
       email: email.trim(),
       options: {
         shouldCreateUser: true,
+        // Không dùng emailRedirectTo để gửi mã 6 số thay vì magic link
       },
     });
 
