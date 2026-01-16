@@ -26,8 +26,8 @@ export default function KeyGenPage() {
       try {
         const user = await getAuthUser();
         if (!user) {
-          // Not logged in - redirect to auth
-          router.push("/auth");
+          // Not logged in - redirect to auth with return URL
+          router.push("/auth?next=/keygen");
           return;
         }
 

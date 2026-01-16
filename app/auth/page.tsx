@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useEffect, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,13 +10,15 @@ import { createClient } from "@/lib/supabase/client";
 import { Mail, Loader2 } from "lucide-react";
 import { OTPInput } from "@/components/ui/otp-input";
 
-export default function AuthPage() {
+function AuthPageContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [step, setStep] = useState<"email" | "otp">("email");
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
+  const nextUrl = searchParams.get("next") || "/courses";
 
   useEffect(() => {
     checkSession();
@@ -26,7 +28,7 @@ export default function AuthPage() {
     const supabase = createClient();
     const { data: { user } } = await supabase.auth.getUser();
     if (user) {
-      router.push("/courses");
+      router.push(nextUrl);
     }
   };
 
@@ -95,7 +97,8 @@ export default function AuthPage() {
         full_name: null,
       });
 
-      router.push("/courses");
+      // Redirect to next URL or default to /courses
+      router.push(nextUrl);
     }
   };
 
@@ -232,5 +235,17 @@ export default function AuthPage() {
         </CardContent>
       </Card>
     </div>
+  );
+}
+
+export default function AuthPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-titan-bg flex items-center justify-center">
+        <div className="text-gray-400">Đang tải...</div>
+      </div>
+    }>
+      <AuthPageContent />
+    </Suspense>
   );
 }
