@@ -7,6 +7,9 @@ import { X, Download, Share2 } from "lucide-react";
 import { usePathname } from "next/navigation";
 
 export function InstallPwaBanner() {
+  // Banner đã được ẩn theo yêu cầu
+  return null;
+
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   const [showBanner, setShowBanner] = useState(false);
   const [isIOS, setIsIOS] = useState(false);
