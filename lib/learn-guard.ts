@@ -4,7 +4,6 @@
  */
 
 import { createClient } from "@/lib/supabase/server";
-import { hasActiveActivation } from "@/lib/activations";
 import { getLessonIndex } from "@/lib/guard";
 import { getCourse } from "@/lib/courseStore";
 
@@ -18,9 +17,8 @@ export interface GuardResult {
  * Check if user can access /learn route
  * Guards theo thứ tự:
  * 1. Auth
- * 2. Purchase paid
- * 3. Activated (có ít nhất 1 device active)
- * 4. Lesson unlocked
+ * 2. Purchase paid (admin đã duyệt)
+ * 3. Lesson unlocked
  */
 export async function checkLearnAccess(
   courseId: string,
@@ -83,17 +81,7 @@ export async function checkLearnAccess(
     };
   }
 
-  // 3. Check activated (có ít nhất 1 device active) - từ DB, không tin localStorage
-  const activated = await hasActiveActivation({ userId, courseId });
-  if (!activated) {
-    return {
-      allowed: false,
-      redirect: `/courses/${courseId}`,
-      reason: "Chưa kích hoạt thiết bị",
-    };
-  }
-
-  // 4. Check lesson unlocked
+  // 3. Check lesson unlocked
   const lessonIndex = getLessonIndex(lessonId);
   if (lessonIndex < 0) {
     return {
@@ -164,12 +152,3 @@ export async function isCoursePaidServer(
   return !!data;
 }
 
-/**
- * Check if user has activated course (server-side)
- */
-export async function isCourseActivatedServer(
-  userId: string,
-  courseId: string
-): Promise<boolean> {
-  return await hasActiveActivation({ userId, courseId });
-}

@@ -9,7 +9,6 @@ import { Badge } from "@/components/ui/badge";
 import { ProgressBar } from "@/components/ProgressBar";
 import { getCourse } from "@/lib/courseStore";
 import { getAuthUser } from "@/lib/auth-supabase";
-import { ActivationCard } from "@/components/ActivationCard";
 import { Toast } from "@/components/ui/toast";
 import { CheckCircle2, Clock, Lock, Play, LogIn, CreditCard } from "lucide-react";
 
@@ -22,7 +21,6 @@ export default function CourseDetailPage() {
   const [user, setUser] = useState<{ email: string } | null>(null);
   const [loading, setLoading] = useState(true);
   const [purchaseStatus, setPurchaseStatus] = useState<PurchaseStatus>("none");
-  const [activated, setActivated] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [toast, setToast] = useState<{ open: boolean; message: string; type: "success" | "error" }>({
     open: false,
@@ -52,13 +50,6 @@ export default function CourseDetailPage() {
         if (purchaseData.purchase) {
           setPurchaseStatus(purchaseData.purchase.status as PurchaseStatus);
         }
-      }
-
-      // Check activation
-      const activationRes = await fetch(`/api/check-activation?courseId=${courseId}`);
-      if (activationRes.ok) {
-        const activationData = await activationRes.json();
-        setActivated(activationData.activated || false);
       }
     } catch (error) {
       console.error("Error loading data:", error);
@@ -123,9 +114,8 @@ export default function CourseDetailPage() {
   const canAccessLesson = (lesson: typeof courseData.lessons[0]) => {
     if (lesson.is_preview) return true; // Preview lessons always accessible
     if (!user) return false; // Not logged in
-    if (purchaseStatus !== "paid") return false; // Not paid
-    if (!activated) return false; // Not activated
-    return true;
+    if (purchaseStatus !== "paid") return false; // Not paid (admin chưa duyệt)
+    return true; // Paid = có thể học ngay
   };
 
   return (
@@ -298,40 +288,14 @@ export default function CourseDetailPage() {
               </div>
             </CardContent>
           </Card>
-        ) : purchaseStatus === "paid" && !activated ? (
-          // Paid but not activated
-          <Card className="mb-6 border-cyan-500/30">
-            <CardContent className="pt-6">
-              <div className="text-center space-y-4 mb-4">
-                <CheckCircle2 className="h-12 w-12 text-green-400 mx-auto" />
-                <div>
-                  <p className="text-lg font-semibold text-green-400 mb-2">Đã thanh toán</p>
-                  <p className="text-sm text-gray-400">
-                    Vui lòng kích hoạt thiết bị để bắt đầu học
-                  </p>
-                </div>
-              </div>
-              <ActivationCard
-                courseId={courseId}
-                onActivated={() => {
-                  setActivated(true);
-                  setToast({
-                    open: true,
-                    message: "Kích hoạt thành công! Bạn có thể bắt đầu học.",
-                    type: "success",
-                  });
-                }}
-              />
-            </CardContent>
-          </Card>
-        ) : purchaseStatus === "paid" && activated ? (
-          // Paid and activated
+        ) : purchaseStatus === "paid" ? (
+          // Paid - có thể học ngay (không cần activation)
           <Card className="mb-6 border-green-500/30">
             <CardContent className="pt-6">
               <div className="text-center space-y-4">
                 <CheckCircle2 className="h-12 w-12 text-green-400 mx-auto" />
                 <div>
-                  <p className="text-lg font-semibold text-green-400 mb-2">Đã kích hoạt</p>
+                  <p className="text-lg font-semibold text-green-400 mb-2">Đã được duyệt</p>
                   <p className="text-sm text-gray-400">
                     Khóa học đã được mở. Chúc bạn học tốt!
                   </p>
