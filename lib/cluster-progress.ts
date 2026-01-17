@@ -218,3 +218,24 @@ export function areAllClusterLessonsWatched(
     isLessonWatchedEnough(courseId, userId, lessonId)
   );
 }
+
+/**
+ * Kiểm tra xem một bài học cụ thể (theo số thứ tự) đã hoàn thành chưa
+ * Hoàn thành = watch progress >= 85% AND lesson is marked as completed
+ */
+export function isLessonNumberCompleted(
+  courseId: string,
+  userId: string,
+  lessonNumber: number, // 1-based: 1, 2, 3, ...
+  completedLessons: string[] // From progress.completedLessons
+): boolean {
+  // Lesson ID format: "lesson01", "lesson02", "lesson03", ...
+  const lessonId = `lesson${String(lessonNumber).padStart(2, "0")}`;
+  
+  // Check if lesson is marked as completed
+  const isMarkedCompleted = completedLessons.includes(lessonId);
+  if (!isMarkedCompleted) return false;
+  
+  // Check if watch progress >= 85%
+  return isLessonWatchedEnough(courseId, userId, lessonId);
+}
