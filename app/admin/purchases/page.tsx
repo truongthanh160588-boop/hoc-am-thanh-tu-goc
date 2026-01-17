@@ -1,12 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { getAuthUser } from "@/lib/auth-supabase";
-import { createClient } from "@/lib/supabase/client";
 import { Toast } from "@/components/ui/toast";
 import { CheckCircle2, XCircle, Clock, ExternalLink, RefreshCw } from "lucide-react";
 
@@ -25,73 +22,52 @@ interface Purchase {
 }
 
 export default function AdminPurchasesPage() {
-  const router = useRouter();
   const [purchases, setPurchases] = useState<Purchase[]>([]);
   const [loading, setLoading] = useState(true);
-  const [isAdmin, setIsAdmin] = useState(false);
   const [toast, setToast] = useState<{ open: boolean; message: string; type: "success" | "error" }>({
     open: false,
     message: "",
     type: "success",
   });
-  const [currentUserEmail, setCurrentUserEmail] = useState<string>("");
 
   useEffect(() => {
-    checkAdminAndLoad();
+    loadPurchases();
   }, []);
-
-  const checkAdminAndLoad = async () => {
-    try {
-      const user = await getAuthUser();
-      if (!user) {
-        router.push("/auth");
-        return;
-      }
-
-      setCurrentUserEmail(user.email);
-
-      // Check admin role from profiles table
-      const supabase = createClient();
-      const { data: profile, error: profileError } = await supabase
-        .from("profiles")
-        .select("role")
-        .eq("id", user.id)
-        .maybeSingle();
-
-      if (profileError || !profile || profile.role !== "admin") {
-        router.push("/courses");
-        return;
-      }
-
-      setIsAdmin(true);
-      await loadPurchases();
-    } catch (error) {
-      console.error("Error checking admin:", error);
-      router.push("/courses");
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const loadPurchases = async () => {
     try {
-      // Load all purchases (not just pending) for admin view
+      setLoading(true);
       const res = await fetch("/api/admin/purchases");
       if (res.ok) {
         const data = await res.json();
         if (data.ok) {
           setPurchases(data.purchases || []);
+        } else {
+          setToast({
+            open: true,
+            message: data.message || "Lỗi tải danh sách đơn hàng",
+            type: "error",
+          });
         }
       } else if (res.status === 403) {
-        router.push("/courses");
+        // Not admin - layout will redirect
+        window.location.href = "/courses";
+      } else {
+        setToast({
+          open: true,
+          message: "Lỗi tải danh sách đơn hàng",
+          type: "error",
+        });
       }
     } catch (error) {
       console.error("Error loading purchases:", error);
       setToast({
         open: true,
-        message: "Lỗi tải danh sách đơn hàng",
+        message: "Lỗi kết nối. Vui lòng thử lại.",
         type: "error",
       });
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -121,13 +97,17 @@ export default function AdminPurchasesPage() {
     } catch (error) {
       setToast({
         open: true,
-        message: "Có lỗi xảy ra",
+        message: "Lỗi kết nối. Vui lòng thử lại.",
         type: "error",
       });
     }
   };
 
   const handleReject = async (purchaseId: string) => {
+    if (!confirm("Bạn có chắc muốn từ chối đơn hàng này?")) {
+      return;
+    }
+
     try {
       const res = await fetch("/api/admin/purchases/update", {
         method: "POST",
@@ -153,7 +133,7 @@ export default function AdminPurchasesPage() {
     } catch (error) {
       setToast({
         open: true,
-        message: "Có lỗi xảy ra",
+        message: "Lỗi kết nối. Vui lòng thử lại.",
         type: "error",
       });
     }
@@ -165,7 +145,7 @@ export default function AdminPurchasesPage() {
         return (
           <Badge variant="default" className="bg-green-600">
             <CheckCircle2 className="h-3 w-3 mr-1" />
-            Đã thanh toán
+            ĐÃ DUYỆT
           </Badge>
         );
       case "rejected":
@@ -185,18 +165,6 @@ export default function AdminPurchasesPage() {
     }
   };
 
-  if (loading) {
-    return (
-      <div className="max-w-6xl mx-auto">
-        <div className="text-center py-12 text-gray-400">Đang tải...</div>
-      </div>
-    );
-  }
-
-  if (!isAdmin) {
-    return null; // Will redirect
-  }
-
   const pendingPurchases = purchases.filter((p) => p.status === "pending");
   const paidPurchases = purchases.filter((p) => p.status === "paid");
   const rejectedPurchases = purchases.filter((p) => p.status === "rejected");
@@ -209,11 +177,11 @@ export default function AdminPurchasesPage() {
           <div>
             <h1 className="text-3xl font-bold mb-2">Quản lý đơn hàng</h1>
             <p className="text-gray-400">
-              Admin: <span className="text-cyan-400">{currentUserEmail}</span>
+              Duyệt đơn hàng đăng ký khóa học
             </p>
           </div>
           <Button variant="outline" onClick={loadPurchases} disabled={loading}>
-            <RefreshCw className="h-4 w-4 mr-2" />
+            <RefreshCw className={`h-4 w-4 mr-2 ${loading ? "animate-spin" : ""}`} />
             Làm mới
           </Button>
         </div>
@@ -255,7 +223,9 @@ export default function AdminPurchasesPage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            {purchases.length === 0 ? (
+            {loading ? (
+              <div className="py-12 text-center text-gray-400">Đang tải...</div>
+            ) : purchases.length === 0 ? (
               <div className="py-12 text-center text-gray-400">
                 Chưa có đơn hàng nào
               </div>
@@ -274,8 +244,8 @@ export default function AdminPurchasesPage() {
                         </div>
                         <div className="grid grid-cols-2 gap-2 text-sm text-gray-400">
                           <div>
-                            <span className="text-gray-500">Email:</span>{" "}
-                            <span className="text-cyan-400">{purchase.user_email || "N/A"}</span>
+                            <span className="text-gray-500">Email học viên:</span>{" "}
+                            <span className="text-cyan-400 font-medium">{purchase.user_email || "N/A"}</span>
                           </div>
                           <div>
                             <span className="text-gray-500">Khóa học:</span>{" "}
@@ -326,7 +296,7 @@ export default function AdminPurchasesPage() {
                             onClick={() => handleApprove(purchase.id)}
                           >
                             <CheckCircle2 className="h-4 w-4 mr-2" />
-                            Duyệt
+                            DUYỆT
                           </Button>
                           <Button
                             variant="outline"
@@ -336,6 +306,14 @@ export default function AdminPurchasesPage() {
                             <XCircle className="h-4 w-4 mr-2" />
                             Từ chối
                           </Button>
+                        </div>
+                      )}
+                      {purchase.status === "paid" && (
+                        <div className="ml-4">
+                          <Badge variant="default" className="bg-green-600">
+                            <CheckCircle2 className="h-3 w-3 mr-1" />
+                            ĐÃ DUYỆT
+                          </Badge>
                         </div>
                       )}
                     </div>
