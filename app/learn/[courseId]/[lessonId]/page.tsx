@@ -117,16 +117,24 @@ export default function LearnPage() {
   };
 
   // Update watch time when video is playing
-  const handleWatchTimeUpdate = async (additionalSeconds: number) => {
+  const handleWatchTimeUpdate = async (currentTime: number, duration: number) => {
     if (!user) return;
-    // Update local
-    updateWatchTime(lessonId, courseId, user.id, additionalSeconds);
+    
+    // Update local với currentTime và duration thực tế
+    updateWatchTime(lessonId, courseId, user.id, currentTime, duration);
+    
     // Sync to DB (debounced - every 10s)
-    if (additionalSeconds >= 10) {
-      await updateWatchTimeSupabase(courseId, user.id, lessonId, additionalSeconds);
+    if (currentTime >= 10) {
+      await updateWatchTimeSupabase(courseId, user.id, lessonId, currentTime);
     }
+    
+    // Update UI progress
     const progress = getWatchProgress(lessonId, courseId, user.id);
     setWatchProgress(progress);
+    
+    // Debug log (có thể xóa sau)
+    console.log(`[LearnPage] Watch progress: ${Math.floor(progress.seconds)}s / ${Math.floor(progress.requiredSeconds)}s (${Math.floor(progress.percent)}%)`);
+    console.log(`[LearnPage] Can mark as watched:`, canMarkAsWatched(lessonId, courseId, user.id));
   };
 
   if (!user) {
@@ -154,7 +162,7 @@ export default function LearnPage() {
     // Check if can mark as watched
     if (!isWatched && !canMarkAsWatched(lessonId, courseId, user.id)) {
       const requiredMinutes = Math.ceil(watchProgress.requiredSeconds / 60);
-      alert(`Bạn cần xem tối thiểu ${requiredMinutes} phút (80% thời lượng video) để đánh dấu đã xem.`);
+      alert(`Bạn cần xem tối thiểu ${requiredMinutes} phút (85% thời lượng video) để đánh dấu đã xem.`);
       return;
     }
     
@@ -277,7 +285,7 @@ export default function LearnPage() {
                               <Clock className="h-5 w-5 text-gray-400 mt-0.5" />
                               <div className="flex-1">
                                 <p className="text-sm text-gray-300 mb-2">
-                                  Bạn cần xem tối thiểu {Math.ceil(watchProgress.requiredSeconds / 60)} phút (80% thời lượng) để đánh dấu đã xem
+                                  Bạn cần xem tối thiểu {Math.ceil(watchProgress.requiredSeconds / 60)} phút (85% thời lượng) để đánh dấu đã xem
                                 </p>
                                 <div className="w-full bg-gray-800 rounded-full h-2">
                                   <div

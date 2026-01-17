@@ -13,6 +13,7 @@ export function YouTubeEmbed({ youtubeId, title, onWatchTimeUpdate }: YouTubeEmb
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const playerRef = useRef<any>(null);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
+  const fallbackIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const [videoDuration, setVideoDuration] = useState<number>(0);
   const lastWatchTimeRef = useRef<number>(0);
 
@@ -36,13 +37,36 @@ export function YouTubeEmbed({ youtubeId, title, onWatchTimeUpdate }: YouTubeEmb
       firstScriptTag.parentNode?.insertBefore(tag, firstScriptTag);
     }
 
-    // Wait for API to load
+    // Wait for API to load (max 10 seconds)
+    let checkCount = 0;
+    const maxChecks = 100; // 10 seconds max
     const checkYT = setInterval(() => {
+      checkCount++;
       if (window.YT && window.YT.Player) {
         clearInterval(checkYT);
         initPlayer();
+      } else if (checkCount >= maxChecks) {
+        // Fallback: nếu YouTube API không load được, dùng simple tracking
+        clearInterval(checkYT);
+        console.warn("[YouTubeEmbed] YouTube API not loaded, using fallback tracking");
+        startFallbackTracking();
       }
     }, 100);
+    
+    function startFallbackTracking() {
+      // Fallback: track thời gian page visible (đơn giản hơn)
+      let startTime = Date.now();
+      fallbackIntervalRef.current = setInterval(() => {
+        if (document.visibilityState === "visible" && iframeRef.current) {
+          const elapsed = (Date.now() - startTime) / 1000; // seconds
+          // Giả sử video dài 5 phút (300s) nếu chưa biết duration
+          const estimatedDuration = 300;
+          if (onWatchTimeUpdate) {
+            onWatchTimeUpdate(Math.min(elapsed, estimatedDuration), estimatedDuration);
+          }
+        }
+      }, 2000);
+    }
 
     function initPlayer() {
       if (!iframeRef.current) return;
@@ -75,14 +99,22 @@ export function YouTubeEmbed({ youtubeId, title, onWatchTimeUpdate }: YouTubeEmb
             const currentTime = playerRef.current.getCurrentTime();
             const duration = playerRef.current.getDuration();
             if (currentTime > 0 && duration > 0) {
+              // Update ngay lập tức để UI responsive hơn
+              if (onWatchTimeUpdate) {
+                onWatchTimeUpdate(currentTime, duration);
+              }
+              // Cũng gọi debounced để tránh quá nhiều update
               debouncedUpdate(currentTime, duration);
+              
+              // Debug log (có thể xóa sau)
+              console.log(`[YouTubeEmbed] Watch time: ${Math.floor(currentTime)}s / ${Math.floor(duration)}s (${Math.floor((currentTime / duration) * 100)}%)`);
             }
           } catch (error) {
             // Player might not be ready
             console.warn("YouTube player not ready:", error);
           }
         }
-      }, 5000); // Update mỗi 5 giây
+      }, 2000); // Update mỗi 2 giây để responsive hơn
     }
 
     function stopTracking() {
@@ -96,6 +128,9 @@ export function YouTubeEmbed({ youtubeId, title, onWatchTimeUpdate }: YouTubeEmb
       if (intervalRef.current) {
         clearInterval(intervalRef.current);
       }
+      if (fallbackIntervalRef.current) {
+        clearInterval(fallbackIntervalRef.current);
+      }
       if (playerRef.current) {
         try {
           playerRef.current.destroy();
@@ -104,7 +139,7 @@ export function YouTubeEmbed({ youtubeId, title, onWatchTimeUpdate }: YouTubeEmb
         }
       }
     };
-  }, [youtubeId, debouncedUpdate]);
+  }, [youtubeId, debouncedUpdate, onWatchTimeUpdate]);
 
   return (
     <div className="w-full aspect-video rounded-lg overflow-hidden border border-titan-border bg-black">

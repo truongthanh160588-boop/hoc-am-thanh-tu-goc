@@ -98,7 +98,7 @@ export async function updateWatchTime(
   courseId: string,
   userId: string,
   lessonId: string,
-  seconds: number
+  currentTime: number // Thời gian hiện tại của video (từ YouTube API)
 ): Promise<void> {
   const supabase = createClient();
 
@@ -112,7 +112,8 @@ export async function updateWatchTime(
       .single();
 
     const watchSeconds = (data?.watch_seconds as Record<string, number>) || {};
-    watchSeconds[lessonId] = (watchSeconds[lessonId] || 0) + seconds;
+    // Lưu thời gian xem cao nhất (không giảm nếu user tua ngược)
+    watchSeconds[lessonId] = Math.max(watchSeconds[lessonId] || 0, currentTime);
 
     await supabase
       .from("progress")
