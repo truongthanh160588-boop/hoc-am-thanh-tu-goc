@@ -63,7 +63,15 @@ function AuthPageContent() {
     setLoading(false);
 
     if (error) {
-      setError(error.message);
+      // Handle rate limiting errors
+      const errorMessage = error.message || "";
+      if (errorMessage.includes("rate limit") || errorMessage.includes("too many") || errorMessage.includes("Email rate limit")) {
+        setError("Đã gửi quá nhiều mã. Vui lòng đợi 1 giờ hoặc dùng email khác để tiếp tục.");
+      } else if (errorMessage.includes("Email address not authorized")) {
+        setError("Email này chưa được cấu hình. Vui lòng liên hệ admin hoặc dùng email khác.");
+      } else {
+        setError(error.message);
+      }
     } else {
       setStep("otp");
       setMessage("Mã 6 số đã được gửi về email của bạn. Vui lòng kiểm tra hộp thư.");
@@ -228,8 +236,11 @@ function AuthPageContent() {
           </form>
 
           <div className="mt-6 pt-6 border-t border-titan-border">
-            <p className="text-xs text-center text-gray-500">
+            <p className="text-xs text-center text-gray-500 mb-2">
               Mã 6 số sẽ được gửi về email của bạn. Vui lòng kiểm tra hộp thư (có thể trong thư mục Spam).
+            </p>
+            <p className="text-xs text-center text-yellow-500">
+              ⚠️ Lưu ý: Nếu gửi quá nhiều lần, bạn cần đợi 1 giờ hoặc dùng email khác.
             </p>
           </div>
         </CardContent>
