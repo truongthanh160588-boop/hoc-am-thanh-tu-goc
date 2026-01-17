@@ -21,28 +21,28 @@ export async function POST(request: NextRequest) {
     if (adminToken && expectedToken && adminToken === expectedToken) {
       isAdmin = true;
     } else {
-      // Fallback: check Supabase session (nếu có)
+      // Fallback: check Supabase session và profiles.role
       try {
         const { createClient } = await import("@/lib/supabase/server");
         const supabase = await createClient();
         const { data: { user }, error: userError } = await supabase.auth.getUser();
         
-        if (userError) {
+        if (userError || !user) {
           console.error("[GENERATE-KEY] Error getting user:", userError);
-        }
-        
-        // Get admin email from env with fallback order
-        const adminEmail = process.env.ADMIN_EMAIL || process.env.NEXT_PUBLIC_ADMIN_EMAIL || "";
-        const adminEmailsEnv = process.env.ADMIN_EMAILS || process.env.NEXT_PUBLIC_ADMIN_EMAILS;
-        const adminEmails = adminEmailsEnv ? adminEmailsEnv.split(",").map(e => e.trim()) : (adminEmail ? [adminEmail] : ["truongthanh160588@gmail.com"]);
-        
-        if (user && user.email) {
-          console.log("[GENERATE-KEY] User email:", user.email, "Admin emails:", adminEmails);
-          if (adminEmails.includes(user.email)) {
-            isAdmin = true;
-          }
         } else {
-          console.log("[GENERATE-KEY] No user found in session");
+          // Check admin role from profiles table
+          const { data: profile, error: profileError } = await supabase
+            .from("profiles")
+            .select("role")
+            .eq("id", user.id)
+            .maybeSingle();
+          
+          if (profile && profile.role === "admin") {
+            isAdmin = true;
+            console.log("[GENERATE-KEY] Admin confirmed via profiles.role");
+          } else {
+            console.log("[GENERATE-KEY] User is not admin:", profileError || "role !== 'admin'");
+          }
         }
       } catch (error: any) {
         // Supabase not available, skip

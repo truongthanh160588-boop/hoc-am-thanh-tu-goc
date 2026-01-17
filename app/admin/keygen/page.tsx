@@ -32,13 +32,17 @@ export default function KeyGenPage() {
       return;
     }
 
-    // Get admin email from env with fallback order
-    const adminEmail = process.env.NEXT_PUBLIC_ADMIN_EMAIL || process.env.ADMIN_EMAIL || "";
-    const adminEmailsEnv = process.env.NEXT_PUBLIC_ADMIN_EMAILS || process.env.ADMIN_EMAILS;
-    const adminEmails = adminEmailsEnv ? adminEmailsEnv.split(",").map(e => e.trim()) : (adminEmail ? [adminEmail] : ["truongthanh160588@gmail.com"]);
+    // Check admin role from profiles table (server-side check in layout, but verify client-side too)
+    const { createClient } = await import("@/lib/supabase/client");
+    const supabase = createClient();
+    const { data: profile, error: profileError } = await supabase
+      .from("profiles")
+      .select("role")
+      .eq("id", authUser.id)
+      .maybeSingle();
 
-    if (!authUser.email || !adminEmails.includes(authUser.email)) {
-      router.push("/");
+    if (profileError || !profile || profile.role !== "admin") {
+      router.push("/courses");
       return;
     }
 
