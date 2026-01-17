@@ -12,6 +12,7 @@ CREATE TABLE IF NOT EXISTS profiles (
   id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
   full_name TEXT,
   phone TEXT,
+  role TEXT DEFAULT 'user' CHECK (role IN ('user', 'admin')),
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
@@ -148,8 +149,72 @@ CREATE TRIGGER update_progress_updated_at
   EXECUTE FUNCTION update_updated_at_column();
 
 -- ============================================
+-- 5. ACTIVATIONS TABLE
+-- ============================================
+CREATE TABLE IF NOT EXISTS activations (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  course_id TEXT NOT NULL,
+  device_id TEXT NOT NULL,
+  activated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+  revoked_at TIMESTAMP WITH TIME ZONE NULL,
+  revoked_by UUID NULL REFERENCES auth.users(id),
+  note TEXT NULL,
+  created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+  UNIQUE(user_id, course_id, device_id)
+);
+
+CREATE INDEX idx_activations_user_course ON activations(user_id, course_id);
+CREATE INDEX idx_activations_course ON activations(course_id);
+-- Partial index for active rows (revoked_at is null)
+CREATE INDEX idx_activations_active ON activations(user_id, course_id) WHERE revoked_at IS NULL;
+
+-- RLS for activations
+ALTER TABLE activations ENABLE ROW LEVEL SECURITY;
+
+-- Users can view own activations
+CREATE POLICY "Users can view own activations"
+  ON activations FOR SELECT
+  USING (auth.uid() = user_id);
+
+-- Users can insert own activation (via server with service role, but policy allows if user_id matches)
+CREATE POLICY "Users can insert own activation"
+  ON activations FOR INSERT
+  WITH CHECK (auth.uid() = user_id);
+
+-- Users cannot update activations directly (only admin can revoke)
+-- No UPDATE policy for regular users
+
+-- Admin can view all activations
+CREATE POLICY "Admins can view all activations"
+  ON activations FOR SELECT
+  USING (
+    EXISTS (
+      SELECT 1 FROM profiles
+      WHERE profiles.id = auth.uid() AND profiles.role = 'admin'
+    )
+  );
+
+-- Admin can update (revoke) all activations
+CREATE POLICY "Admins can update all activations"
+  ON activations FOR UPDATE
+  USING (
+    EXISTS (
+      SELECT 1 FROM profiles
+      WHERE profiles.id = auth.uid() AND profiles.role = 'admin'
+    )
+  );
+
+-- Trigger for updated_at
+CREATE TRIGGER update_activations_updated_at
+  BEFORE UPDATE ON activations
+  FOR EACH ROW
+  EXECUTE FUNCTION update_updated_at_column();
+
+-- ============================================
 -- INITIAL DATA (Optional)
 -- ============================================
 
 -- Note: Run this after creating your first user
--- INSERT INTO profiles (id, full_name) VALUES ('user-uuid-here', 'Admin User');
+-- INSERT INTO profiles (id, full_name, role) VALUES ('user-uuid-here', 'Admin User', 'admin');

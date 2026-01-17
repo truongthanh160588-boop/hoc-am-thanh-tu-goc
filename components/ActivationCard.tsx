@@ -70,10 +70,14 @@ export function ActivationCard({ courseId, onActivated }: ActivationCardProps) {
       const data = await response.json();
 
       if (data.ok) {
-        // Lưu trạng thái kích hoạt
+        // Lưu trạng thái kích hoạt vào localStorage (cho UX nhanh)
+        // Nhưng nguồn chân lý là DB, sẽ được check lại khi vào /learn
         setActivationState(courseId, deviceId, true);
         setActivated(true);
-        setMessage({ type: "success", text: "Kích hoạt thành công!" });
+        setMessage({ 
+          type: "success", 
+          text: data.message || "Kích hoạt thành công!" 
+        });
         if (onActivated) {
           onActivated();
         }

@@ -9,6 +9,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { getAuthUser } from "@/lib/auth-supabase";
 import { Copy, Key, Loader2, CheckCircle2, AlertTriangle } from "lucide-react";
 import { Toast } from "@/components/ui/toast";
+import { ActivationsList } from "@/components/admin/ActivationsList";
 
 export default function KeyGenPage() {
   const router = useRouter();
@@ -237,6 +238,11 @@ export default function KeyGenPage() {
               </div>
             </CardContent>
           </Card>
+
+          {/* Activations List */}
+          <div className="mt-8">
+            <ActivationsList courseId={courseId} />
+          </div>
         </div>
       </div>
 

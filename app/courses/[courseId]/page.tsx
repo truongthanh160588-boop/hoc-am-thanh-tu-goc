@@ -41,9 +41,35 @@ export default function CourseDetailPage() {
 
   useEffect(() => {
     checkPurchase();
-    // Check activation
-    setActivated(isActivated(courseId));
+    checkActivation();
   }, [courseId]);
+
+  const checkActivation = async () => {
+    try {
+      const response = await fetch(`/api/check-activation?courseId=${courseId}`);
+      const data = await response.json();
+      if (data.ok) {
+        setActivated(data.activated);
+        // Sync to localStorage for UX
+        if (data.activated) {
+          const deviceId = localStorage.getItem("hatg_device_id_v1");
+          if (deviceId) {
+            const activationState = JSON.parse(localStorage.getItem("hatg_activation_v1") || "{}");
+            activationState[courseId] = {
+              activated: true,
+              deviceId,
+              activatedAt: new Date().toISOString(),
+            };
+            localStorage.setItem("hatg_activation_v1", JSON.stringify(activationState));
+          }
+        }
+      }
+    } catch (error) {
+      console.error("Error checking activation:", error);
+      // Fallback to localStorage
+      setActivated(isActivated(courseId));
+    }
+  };
 
   const checkPurchase = async () => {
     try {

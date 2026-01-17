@@ -48,8 +48,7 @@ import { isCoursePaidZalo } from "@/lib/purchase-zalo";
 import { updateWatchTime, canMarkAsWatched, getWatchProgress } from "@/lib/watch-time";
 import { getProgress as getProgressSupabase, updateProgress as updateProgressSupabase, updateWatchTime as updateWatchTimeSupabase } from "@/lib/progress-supabase";
 import { getProgress, setProgress as setLocalProgress } from "@/lib/progress";
-import { isActivated } from "@/lib/device-activation";
-import { ActivationCard } from "@/components/ActivationCard";
+// Removed isActivated check - now handled by server guard in layout.tsx
 import { ArrowLeft, Copy, MessageCircle, CheckCircle2, Circle, Clock, Lock } from "lucide-react";
 
 export default function LearnPage() {
@@ -67,23 +66,12 @@ export default function LearnPage() {
   const [user, setUser] = useState<{ id: string; email: string } | null>(null);
   const [watched, setWatched] = useState(false);
   const [isWatched, setIsWatched] = useState(false);
-  const [activated, setActivated] = useState(false);
 
   useEffect(() => {
-    // Check activation first
-    const isAct = isActivated(courseId);
-    setActivated(isAct);
-    
-    if (!isAct) {
-      setShowToast(true);
-      setTimeout(() => {
-        router.push(`/courses/${courseId}`);
-      }, 2000);
-      return;
-    }
-    
+    // Server guard đã check ở layout.tsx
+    // Client chỉ cần load user và progress
     loadUser();
-  }, [courseId, router]);
+  }, [courseId, lessonId]);
 
   const loadUser = async () => {
     const authUser = await getAuthUser();
@@ -92,34 +80,16 @@ export default function LearnPage() {
       return;
     }
     setUser(authUser);
-    
-    const isPaid = await isCoursePaidZalo(courseId, authUser.email);
-    if (!isPaid) {
-      setShowToast(true);
-      setTimeout(() => {
-        router.push(`/courses/${courseId}`);
-      }, 2000);
+
+    const lesson = courseData.lessons.find((l) => l.id === lessonId);
+    if (!lesson) {
+      router.push(`/courses/${courseId}`);
       return;
     }
 
     const watchedState = isLessonWatched(lessonId, courseId, authUser.id);
     setWatched(watchedState);
     setIsWatched(watchedState);
-
-      // Guard: Check activation
-      if (!isActivated(courseId)) {
-        setShowToast(true);
-        setTimeout(() => {
-          router.push(`/courses/${courseId}`);
-        }, 2000);
-        return;
-      }
-
-      const lesson = courseData.lessons.find((l) => l.id === lessonId);
-      if (!lesson) {
-        router.push(`/courses/${courseId}`);
-        return;
-      }
 
     const lessonIndex = getLessonIndex(lessonId);
     
