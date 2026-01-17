@@ -43,6 +43,7 @@ export async function GET(request: NextRequest) {
     const searchParams = request.nextUrl.searchParams;
     const status = searchParams.get("status") as "pending" | "paid" | "rejected" | undefined;
 
+    // Load all purchases for admin (not filtered by status unless specified)
     const purchases = await adminListPurchases(status);
 
     // Lấy emails từ auth.users (dùng service role)
