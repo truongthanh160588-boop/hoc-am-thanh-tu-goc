@@ -45,14 +45,15 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Verify HMAC key
+    // Verify HMAC key (case-insensitive comparison)
     const payload = `${courseId}|${deviceId}|PERM`;
     const hmac = crypto.createHmac("sha256", secret);
     hmac.update(payload);
     const signature = hmac.digest("base64url").slice(0, 20);
     const expectedKey = `HATG-${signature.slice(0, 5)}-${signature.slice(5, 10)}-${signature.slice(10, 15)}-${signature.slice(15, 20)}`;
 
-    if (key !== expectedKey) {
+    // Compare case-insensitive (user may copy-paste with different case)
+    if (key.toUpperCase() !== expectedKey.toUpperCase()) {
       return NextResponse.json(
         { ok: false, message: "Key không hợp lệ" },
         { status: 400 }
