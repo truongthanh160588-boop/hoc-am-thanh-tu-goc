@@ -11,7 +11,7 @@ import { getCourse } from "@/lib/courseStore";
 import { getAuthUser } from "@/lib/auth-supabase";
 import { ActivationCard } from "@/components/ActivationCard";
 import { Toast } from "@/components/ui/toast";
-import { CheckCircle2, Clock, Lock, Play, LogIn, CreditCard, Upload } from "lucide-react";
+import { CheckCircle2, Clock, Lock, Play, LogIn, CreditCard } from "lucide-react";
 
 type PurchaseStatus = "none" | "pending" | "paid" | "rejected";
 
@@ -24,8 +24,6 @@ export default function CourseDetailPage() {
   const [purchaseStatus, setPurchaseStatus] = useState<PurchaseStatus>("none");
   const [activated, setActivated] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const [showUploadDialog, setShowUploadDialog] = useState(false);
-  const [proofUrl, setProofUrl] = useState("");
   const [toast, setToast] = useState<{ open: boolean; message: string; type: "success" | "error" }>({
     open: false,
     message: "",
@@ -113,56 +111,6 @@ export default function CourseDetailPage() {
     }
   };
 
-  const handleUploadProof = async () => {
-    if (!proofUrl.trim()) {
-      setToast({
-        open: true,
-        message: "Vui lòng nhập URL ảnh chuyển khoản",
-        type: "error",
-      });
-      return;
-    }
-
-    setSubmitting(true);
-    try {
-      const res = await fetch("/api/purchases/create", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          courseId,
-          amountVnd: 3000000,
-          proofUrl: proofUrl.trim(),
-          note: `HATG ${user?.email.split("@")[0]}`,
-        }),
-      });
-
-      const data = await res.json();
-      if (data.ok) {
-        setPurchaseStatus("pending");
-        setShowUploadDialog(false);
-        setProofUrl("");
-        setToast({
-          open: true,
-          message: "Đã tạo đơn hàng với ảnh chuyển khoản. Vui lòng chờ admin duyệt.",
-          type: "success",
-        });
-      } else {
-        setToast({
-          open: true,
-          message: data.message || "Có lỗi xảy ra",
-          type: "error",
-        });
-      }
-    } catch (error) {
-      setToast({
-        open: true,
-        message: "Có lỗi xảy ra",
-        type: "error",
-      });
-    } finally {
-      setSubmitting(false);
-    }
-  };
 
   if (courseId !== courseData.id) {
     return null;
@@ -304,27 +252,16 @@ export default function CourseDetailPage() {
                   <p className="text-xs text-gray-400 mb-4">
                     <span className="font-medium text-gray-300">Thanh toán:</span> Chuyển khoản → Đăng ký → Chờ admin duyệt → Kích hoạt
                   </p>
-                  <div className="space-y-2">
-                    <Button
-                      variant="primary"
-                      className="w-full"
-                      size="lg"
-                      onClick={handleCreatePurchase}
-                      disabled={submitting}
-                    >
-                      <CreditCard className="h-4 w-4 mr-2" />
-                      {submitting ? "Đang xử lý..." : "Đăng ký khóa học"}
-                    </Button>
-                    <Button
-                      variant="outline"
-                      className="w-full"
-                      onClick={() => setShowUploadDialog(true)}
-                      disabled={submitting}
-                    >
-                      <Upload className="h-4 w-4 mr-2" />
-                      Đã chuyển khoản, upload ảnh
-                    </Button>
-                  </div>
+                  <Button
+                    variant="primary"
+                    className="w-full"
+                    size="lg"
+                    onClick={handleCreatePurchase}
+                    disabled={submitting}
+                  >
+                    <CreditCard className="h-4 w-4 mr-2" />
+                    {submitting ? "Đang xử lý..." : "Đăng ký khóa học"}
+                  </Button>
                 </div>
               </div>
             </CardContent>
@@ -409,51 +346,6 @@ export default function CourseDetailPage() {
             </CardContent>
           </Card>
         ) : null}
-
-        {/* Upload Proof Dialog */}
-        {showUploadDialog && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-            <Card className="max-w-md w-full mx-4">
-              <CardHeader>
-                <CardTitle>Upload ảnh chuyển khoản</CardTitle>
-                <CardDescription>
-                  Dán link ảnh chuyển khoản (từ Google Drive, Imgur, etc.)
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <input
-                    type="text"
-                    placeholder="https://..."
-                    value={proofUrl}
-                    onChange={(e) => setProofUrl(e.target.value)}
-                    className="w-full px-3 py-2 bg-gray-900 border border-titan-border rounded-md text-gray-300"
-                  />
-                  <div className="flex gap-2">
-                    <Button
-                      variant="outline"
-                      className="flex-1"
-                      onClick={() => {
-                        setShowUploadDialog(false);
-                        setProofUrl("");
-                      }}
-                    >
-                      Hủy
-                    </Button>
-                    <Button
-                      variant="primary"
-                      className="flex-1"
-                      onClick={handleUploadProof}
-                      disabled={submitting}
-                    >
-                      {submitting ? "Đang xử lý..." : "Xác nhận"}
-                    </Button>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        )}
       </div>
 
       <Toast

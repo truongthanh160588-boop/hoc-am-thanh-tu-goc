@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Toast } from "@/components/ui/toast";
-import { CheckCircle2, XCircle, Clock, ExternalLink, RefreshCw } from "lucide-react";
+import { CheckCircle2, XCircle, Clock, RefreshCw } from "lucide-react";
 
 interface Purchase {
   id: string;
@@ -16,7 +16,6 @@ interface Purchase {
   amount_vnd?: number;
   amount?: number;
   note?: string;
-  proof_url?: string;
   created_at: string;
   updated_at: string;
 }
@@ -267,19 +266,6 @@ export default function AdminPurchasesPage() {
                             <div className="col-span-2">
                               <span className="text-gray-500">Nội dung CK:</span>{" "}
                               <span className="text-gray-300 font-mono text-xs">{purchase.note}</span>
-                            </div>
-                          )}
-                          {purchase.proof_url && (
-                            <div className="col-span-2">
-                              <span className="text-gray-500">Ảnh chuyển khoản:</span>{" "}
-                              <a
-                                href={purchase.proof_url}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="text-cyan-400 hover:underline inline-flex items-center gap-1"
-                              >
-                                Xem ảnh <ExternalLink className="h-3 w-3" />
-                              </a>
                             </div>
                           )}
                           <div className="col-span-2">
