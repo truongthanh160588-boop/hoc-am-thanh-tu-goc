@@ -74,7 +74,7 @@ const lessons: Lesson[] = Array.from({ length: 20 }, (_, i) => {
     id: `lesson${String(lessonNum).padStart(2, "0")}`,
     title: `Bài ${String(lessonNum).padStart(2, "0")}: ${titles[i]}`,
     youtubeId: youtubeIds[i],
-    is_preview: lessonNum <= 3, // 3 bài đầu là preview
+    is_preview: lessonNum === 1, // Chỉ bài đầu tiên là preview
     quiz: Array.from({ length: 5 }, (_, q) => ({
       id: `q${q + 1}`,
       question: `Câu hỏi ${q + 1} của bài ${lessonNum}: ${titles[i]}?`,
