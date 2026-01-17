@@ -124,9 +124,9 @@ export default function HomePage() {
                   1-5
                 </div>
                 <div>
-                  <h3 className="font-semibold mb-2">Cơ bản về âm thanh</h3>
+                  <h3 className="font-semibold mb-2">Cơ bản về thiết bị và lý thuyết</h3>
                   <p className="text-sm text-gray-400">
-                    Tần số, decibel, sóng âm, microphone, preamp
+                    Main công suất, coil loa, tần số, đấu nối thiết bị, EQ
                   </p>
                 </div>
               </div>
@@ -140,9 +140,9 @@ export default function HomePage() {
                   6-10
                 </div>
                 <div>
-                  <h3 className="font-semibold mb-2">Công cụ xử lý</h3>
+                  <h3 className="font-semibold mb-2">Phần mềm đo và xử lý</h3>
                   <p className="text-sm text-gray-400">
-                    EQ, Compressor, Reverb, Delay, Panning
+                    Tập nghe, Smaart đo âm thanh, vang số PC, soundcard, Smaart V8
                   </p>
                 </div>
               </div>
@@ -156,9 +156,9 @@ export default function HomePage() {
                   11-15
                 </div>
                 <div>
-                  <h3 className="font-semibold mb-2">Kỹ thuật mixing</h3>
+                  <h3 className="font-semibold mb-2">Thực hành đo phase và crossover</h3>
                   <p className="text-sm text-gray-400">
-                    Mix bus, automation, sidechain, saturation, phase
+                    Smaart V9, vang số X5 đo phase, setup lấy phase, crossover số, phase full và sub
                   </p>
                 </div>
               </div>
@@ -172,9 +172,9 @@ export default function HomePage() {
                   16-20
                 </div>
                 <div>
-                  <h3 className="font-semibold mb-2">Mastering & xuất file</h3>
+                  <h3 className="font-semibold mb-2">Hướng dẫn sử dụng Mixer và Crossover</h3>
                   <p className="text-sm text-gray-400">
-                    Final mix, mastering, reference tracks, export
+                    Mixer M32R, Mixer cơ + Vang số, Mixer số SQ5, Mixer số LS9, Crossover CD48
                   </p>
                 </div>
               </div>
