@@ -1,782 +1,805 @@
 # 📊 BÁO CÁO DỰ ÁN: HỌC ÂM THANH TỪ GỐC
 
-**Ngày tạo báo cáo:** 2024  
-**Phiên bản:** 0.1.0  
-**Trạng thái:** ✅ Production Ready (Deployed trên Vercel)
+**Ngày cập nhật:** 2024  
+**Phiên bản:** 2.0.0  
+**Trạng thái:** ✅ Production Ready (Deployed trên Vercel)  
+**URL Production:** `https://hoc-am-thanh-tu-goc.vercel.app`
 
 ---
 
 ## 🎯 TỔNG QUAN DỰ ÁN
 
-**Học Âm Thanh Từ Gốc** là một nền tảng học tập trực tuyến (PWA) chuyên về âm thanh, được xây dựng với Next.js 14, TypeScript, và Supabase. Dự án cung cấp khóa học "Học trọn đời" với 20 bài học từ cơ bản đến nâng cao, kèm theo hệ thống quiz, theo dõi tiến độ, và hỗ trợ trực tiếp qua Zalo.
+**Học Âm Thanh Từ Gốc** là một nền tảng học tập trực tuyến (PWA) chuyên về âm thanh, được xây dựng với **Next.js 14**, **TypeScript**, và **Supabase**. Dự án cung cấp khóa học "Học trọn đời" với **20 bài học** từ cơ bản đến nâng cao, kèm theo hệ thống **tự đánh giá**, theo dõi tiến độ, và hỗ trợ trực tiếp qua Zalo.
 
-**URL Production:** `https://hoc-am-thanh-tu-goc.vercel.app`
+### Triết Lý Khóa Học
 
----
+> **"Không dạy để nhớ – dạy để hiểu – hiểu để làm được.  
+> Không hiểu thì hỏi trực tiếp – không ai bỏ rơi ai."**
 
-## 🚀 TÍNH NĂNG ĐÃ HOÀN THÀNH
+### Đối Tượng
 
-### 1. ✅ PWA (Progressive Web App)
-- **Service Worker** với `next-pwa` (v5.6.0)
-- **Web App Manifest** (`manifest.webmanifest`) với đầy đủ metadata
-- **Icons** đầy đủ (192x192, 512x512) cho iOS và Android
-- **Offline support** với trang `/offline` fallback
-- **Install banner** tự động cho Chrome/Android và hướng dẫn iOS Safari
-- **Caching strategy**:
-  - YouTube videos: NetworkFirst với cache 7 ngày
-  - Static assets: NetworkFirst với cache 1 ngày
-  - Offline fallback document
-- **Runtime caching** cho tất cả requests
-- **Skip waiting** và **register** tự động
-
-### 2. ✅ Authentication & User Management
-- **Supabase Auth** tích hợp đầy đủ với `@supabase/ssr`
-- **Email + OTP** (Magic Link) - phương thức chính
-- **Email + Password** - phương thức phụ
-- **Session management** với middleware tự động refresh
-- **Auto redirect** sau login/logout
-- **User profile** lưu trên Supabase (`profiles` table)
-- **Auth callback** handler tại `/auth/callback`
-- **Protected routes** với guard middleware
-
-### 3. ✅ Course Management
-- **20 bài học** với video YouTube embed
-- **Quiz trắc nghiệm** sau mỗi bài (5 câu hỏi, ≥80% để pass)
-- **Progress tracking**:
-  - Xem video ≥80% thời lượng (hoặc ≥5 phút tối thiểu)
-  - Quiz đạt ≥80% để pass
-  - Unlock bài tiếp theo tự động
-  - Lưu watch time chi tiết (seconds per lesson)
-- **Lesson sidebar** với trạng thái:
-  - 🔒 Locked (chưa unlock)
-  - ⭕ Unlocked (đã mở nhưng chưa hoàn thành)
-  - ✅ Completed (đã xem + pass quiz)
-- **Progress bar** tổng khóa học (percentage)
-- **Course data** lưu trong `data/course.ts` (có thể mở rộng)
-
-### 4. ✅ Purchase & Payment System
-- **Zalo Payment Flow**:
-  - Tạo đơn hàng với `status: "pending"`
-  - Hiển thị thông tin chuyển khoản (Vietcombank Bạc Liêu)
-  - Copy thông tin chuyển khoản (số tài khoản, tên, số tiền)
-  - Copy tin nhắn Zalo mẫu tự động
-  - User bấm "Tôi đã thanh toán" → tạo purchase record
-  - Admin duyệt tại `/admin/purchases`
-- **Purchase Guard**: Chỉ học viên đã thanh toán (`status === "paid"`) mới vào được `/learn`
-- **Billing/Invoice**: Trang `/account/billing` hiển thị hóa đơn đã thanh toán
-- **Price**: 3.000.000 VNĐ (Học trọn đời)
-- **Purchase status**: `pending` | `paid` | `rejected`
-
-### 5. ✅ Device Activation System
-- **Device ID**: Tự động generate bằng `crypto.randomUUID()` (lưu localStorage)
-- **Activation Key**: HMAC SHA256 với secret key (format: `HATG-XXXXX-XXXXX-XXXXX-XXXXX`)
-- **Key Generator**: 
-  - Trang `/keygen` (public, check admin qua API)
-  - Trang `/admin/keygen` (admin UI)
-  - API `/api/generate-key` (POST, admin only)
-- **Key Verification**: API `/api/verify-key` (POST, server-side)
-- **Activation Guard**: Chỉ học viên đã kích hoạt mới học được
-- **LocalStorage**: Lưu Device ID và activation state (`hatg_activation_v1`)
-- **Activation state**: Lưu theo `courseId` (có thể kích hoạt nhiều khóa)
-
-### 6. ✅ Admin Panel
-- **`/admin`**: Admin dashboard (overview)
-- **`/admin/purchases`**: Duyệt đơn hàng (approve/reject)
-  - Hiển thị tất cả purchases (pending, paid, rejected)
-  - Filter theo status
-  - Approve/Reject với một click
-  - Hiển thị thông tin chi tiết: email, course, amount, note, created_at
-- **`/admin/keygen`**: Tạo Activation Key cho học viên
-  - Nhập Device ID
-  - Generate key tự động
-  - Copy key dễ dàng
-- **Admin Guard**: 
-  - Check email trong `ADMIN_EMAIL` hoặc `ADMIN_EMAILS` env
-  - Support multiple admins (comma-separated)
-  - Fallback: `truongthanh160588@gmail.com`
-- **Admin Badge**: Hiển thị email admin ở góc trang
-
-### 7. ✅ UI/UX - Titan Theme
-- **Dark theme** với nền đen (`#0b0f14`)
-- **Titan border** với hiệu ứng glow cyan/teal
-- **Gradient buttons**:
-  - Primary: cyan → teal
-  - Secondary: blue → purple
-- **Responsive design** (mobile-first):
-  - Mobile: Sidebar dùng Sheet component
-  - Desktop: Sidebar cố định bên trái
-- **Skeleton loading** cho lazy load components
-- **Toast notifications** cho feedback (success, error)
-- **Confetti animation** khi pass quiz (3 giây)
-- **Progress indicators** với gradient bars
-- **Card components** với border titanium
-- **Icons**: lucide-react (400+ icons)
-
-### 8. ✅ SEO & Metadata
-- **Sitemap** (`/sitemap.xml`) tự động generate
-- **robots.txt** trong public folder
-- **Meta tags** đầy đủ:
-  - Title, description
-  - Open Graph (OG) tags
-  - Twitter Card
-- **Apple Web App** tags:
-  - `apple-mobile-web-app-capable`
-  - `apple-mobile-web-app-status-bar-style`
-  - `apple-mobile-web-app-title`
-- **Theme color**: `#0b0f14`
-- **Viewport settings**: responsive, no zoom
-
-### 9. ✅ Support & Help
-- **Support Form**: Gửi thông tin ca khó (thiết bị, vấn đề, hình ảnh)
-- **Zalo Integration**: Link trực tiếp đến Zalo 0974 70 4444
-- **FAQ Section**: Trang landing có 4 câu hỏi thường gặp (Accordion)
-- **Footer**: Copyright và thông tin liên hệ
-- **Copy buttons**: Copy mã bài học, thông tin chuyển khoản
-
-### 10. ✅ Data Persistence
-- **Supabase PostgreSQL**: 
-  - `profiles`: User profiles
-  - `purchases`: Purchase records
-  - `progress`: Learning progress (unlocked_index, completed_lessons, watch_seconds)
-  - `quiz_attempts`: Quiz scores và pass status
-- **Row Level Security (RLS)**: Bảo mật dữ liệu user
-- **LocalStorage Fallback**: 
-  - Progress khi offline hoặc lỗi Supabase
-  - Device ID và activation state
-  - Watch time tracking
-- **Debounced Updates**: Watch time sync mỗi 10 giây
-- **Auto-sync**: Progress sync từ DB về local khi load page
-
-### 11. ✅ Learning Flow & Guards
-- **Multi-layer Guards**:
-  1. Authentication guard (phải đăng nhập)
-  2. Purchase guard (phải đã thanh toán)
-  3. Activation guard (phải đã kích hoạt)
-  4. Lesson unlock guard (phải unlock bài trước)
-- **Watch Time Tracking**:
-  - Track seconds watched per lesson
-  - Minimum 80% video length hoặc 5 phút
-  - Real-time progress bar
-- **Quiz System**:
-  - 5 câu hỏi per lesson
-  - Score ≥80% để pass
-  - Có thể làm lại nhiều lần
-  - Lưu attempt vào database
-- **Unlock Logic**:
-  - Bài 1: Unlock mặc định
-  - Bài tiếp: Unlock khi pass quiz bài trước
+- Người đã đi làm, chơi âm thanh, kinh doanh âm thanh
+- Không phải học sinh – không cần điểm số – không cần thi viết dài
+- Mục tiêu: **xem đủ → hiểu → làm được**
 
 ---
 
-## 📁 CẤU TRÚC DỰ ÁN
+## 🏗️ KIẾN TRÚC HỆ THỐNG
+
+### Tech Stack
+
+**Frontend:**
+- Next.js 14.2.0 (App Router)
+- React 18.3.0
+- TypeScript 5
+- Tailwind CSS 3.4.1
+- shadcn/ui (Component library)
+- lucide-react 0.400.0 (Icons)
+
+**Backend & Database:**
+- Supabase (PostgreSQL + Auth + RLS)
+- Next.js API Routes (Server-side)
+- `@supabase/supabase-js 2.39.0`
+- `@supabase/ssr 0.1.0`
+
+**PWA:**
+- next-pwa 5.6.0 (Service Worker)
+- Web App Manifest
+- Workbox (runtime caching)
+
+**Utilities:**
+- class-variance-authority 0.7.0
+- clsx 2.1.1 + tailwind-merge 2.4.0
+- sharp 0.34.5 (Image processing)
+
+### Cấu Trúc Thư Mục
 
 ```
 hoc-am-thanh-tu-goc/
 ├── app/                          # Next.js App Router
 │   ├── account/
-│   │   └── billing/
-│   │       └── page.tsx          # Trang hóa đơn (protected)
+│   │   └── billing/              # Trang hóa đơn (protected)
 │   ├── admin/
-│   │   ├── keygen/
-│   │   │   └── page.tsx          # Key Generator (admin UI)
-│   │   ├── purchases/
-│   │   │   └── page.tsx          # Duyệt đơn hàng
+│   │   ├── keygen/               # Key Generator (admin only)
+│   │   ├── purchases/            # Duyệt đơn hàng (admin only)
 │   │   └── page.tsx              # Admin dashboard
-│   ├── api/
-│   │   ├── generate-key/
-│   │   │   └── route.ts          # API tạo Activation Key (POST, admin only)
-│   │   └── verify-key/
-│   │       └── route.ts          # API verify Activation Key (POST)
+│   ├── api/                      # API Routes
+│   │   ├── admin/                # Admin APIs
+│   │   │   ├── activations/      # List activations
+│   │   │   ├── purchases/        # List/Update purchases
+│   │   │   └── revoke-device/    # Revoke device activation
+│   │   ├── check-activation/     # Check activation status
+│   │   ├── generate-key/         # Generate activation key (admin)
+│   │   ├── purchases/            # Purchase APIs
+│   │   │   ├── create/           # Create purchase
+│   │   │   └── status/            # Get purchase status
+│   │   ├── verify-key/           # Verify activation key
+│   │   └── video-call/
+│   │       └── booking/          # Book video call
 │   ├── auth/
 │   │   ├── callback/             # Supabase OAuth callback
-│   │   └── page.tsx              # Trang đăng nhập (Email + OTP/Password)
+│   │   └── page.tsx              # Đăng nhập (Email + OTP)
 │   ├── courses/
 │   │   ├── [courseId]/
 │   │   │   └── page.tsx          # Chi tiết khóa học + Mua khóa học
 │   │   └── page.tsx              # Danh sách khóa học
-│   ├── keygen/
-│   │   └── page.tsx              # Key Generator (public, API check admin)
 │   ├── learn/
 │   │   └── [courseId]/
 │   │       └── [lessonId]/
-│   │           └── page.tsx      # Trang học bài (Video + Quiz)
+│   │           ├── layout.tsx    # Server guard (paid + activated)
+│   │           └── page.tsx      # Trang học bài (Video + Self Assessment)
 │   ├── offline/
 │   │   └── page.tsx              # Trang offline fallback
-│   ├── preview/
-│   │   └── page.tsx              # Trang preview (nếu có)
-│   ├── start/
-│   │   └── page.tsx              # Trang hướng dẫn học viên (4 bước)
 │   ├── globals.css               # Global styles + Titan theme
-│   ├── layout.tsx                # Root layout (metadata, AppShell)
-│   ├── page.tsx                  # Landing page (Hero, Benefits, FAQ, CTA)
-│   └── sitemap.ts                # Sitemap generator
+│   ├── layout.tsx                # Root layout (metadata, PWA icons)
+│   └── page.tsx                  # Landing page
 ├── components/
 │   ├── ui/                       # shadcn/ui components
-│   │   ├── accordion.tsx         # FAQ accordion
-│   │   ├── alert.tsx             # Alert messages
-│   │   ├── badge.tsx              # Badges/labels
-│   │   ├── button.tsx             # Buttons với variants
-│   │   ├── card.tsx               # Card container
-│   │   ├── dialog.tsx             # Modal dialogs
-│   │   ├── input.tsx              # Text inputs
-│   │   ├── otp-input.tsx          # 6-digit OTP input
-│   │   ├── progress.tsx           # Progress bars
-│   │   ├── sheet.tsx              # Sidebar/mobile menu
-│   │   ├── skeleton.tsx           # Loading skeletons
-│   │   └── toast.tsx              # Toast notifications
-│   ├── admin/
-│   │   ├── CourseEditor.tsx       # Editor khóa học (nếu có)
-│   │   ├── LessonEditor.tsx       # Editor bài học (nếu có)
-│   │   └── LessonList.tsx         # Danh sách bài học (nếu có)
-│   ├── ActivationCard.tsx         # Card kích hoạt Device ID
-│   ├── AppShell.tsx               # Layout wrapper (Topbar, Footer, Navigation)
-│   ├── Confetti.tsx               # Animation khi pass quiz
-│   ├── CourseCard.tsx             # Card khóa học
-│   ├── InstallPwaBanner.tsx       # Banner cài PWA
-│   ├── LessonSidebar.tsx          # Sidebar danh sách bài
-│   ├── ProgressBar.tsx            # Progress bar tổng khóa
-│   ├── QuizPanel.tsx               # Panel quiz (5 câu hỏi)
-│   ├── SupportForm.tsx            # Form gửi thông tin ca khó
-│   └── YouTubeEmbed.tsx            # Component embed YouTube (với watch time tracking)
+│   ├── ActivationCard.tsx        # Device activation UI (deprecated)
+│   ├── LessonSelfAssessment.tsx  # Self-assessment cho từng bài
+│   ├── LessonSidebar.tsx         # Sidebar danh sách bài học
+│   ├── PracticeToolPanel.tsx     # Link đến công cụ thực hành
+│   ├── ProgressBar.tsx           # Progress bar tổng khóa học
+│   ├── SelfAssessmentPanel.tsx   # Self-assessment cho cụm bài
+│   ├── VideoCallBooking.tsx       # Form đăng ký video call
+│   └── YouTubeEmbed.tsx          # YouTube video player với tracking
 ├── lib/
-│   ├── supabase/
-│   │   ├── client.ts              # Supabase client-side
-│   │   ├── server.ts              # Supabase server-side
-│   │   └── middleware.ts           # Supabase middleware (session refresh)
-│   ├── admin.ts                   # Admin utilities
-│   ├── auth-supabase.ts           # Auth utilities (getAuthUser, signOut)
-│   ├── auth.ts                    # Auth helpers (nếu có)
-│   ├── courseStore.ts             # Course data store
-│   ├── debounce.ts                 # Debounce utility
-│   ├── device-activation.ts       # Device ID & Activation logic
-│   ├── guard.ts                   # Lesson unlock guard
-│   ├── lesson-watched.ts          # Lesson watched state
-│   ├── progress.ts                # Progress localStorage
-│   ├── progress-supabase.ts       # Progress Supabase (get, update, watch time)
-│   ├── purchase-supabase.ts       # Purchase Supabase helpers
-│   ├── purchase-zalo.ts           # Zalo purchase logic
-│   ├── purchase.ts                # Purchase helpers
-│   ├── utils.ts                   # General utilities
-│   └── watch-time.ts              # Watch time tracking
-├── public/
-│   ├── icons/                     # PWA icons
-│   ├── logo.png                   # Logo thương hiệu
-│   ├── manifest.webmanifest       # PWA manifest
-│   ├── robots.txt                 # SEO robots
-│   ├── sw.js                      # Service Worker (generated)
-│   └── workbox-*.js               # Workbox files (generated)
-├── supabase/
-│   └── schema.sql                 # Database schema (4 tables + RLS)
+│   ├── supabase/                 # Supabase clients
+│   │   ├── client.ts             # Client-side client
+│   │   ├── server.ts             # Server-side client
+│   │   ├── service.ts            # Service role client (admin only)
+│   │   └── middleware.ts         # Middleware client
+│   ├── auth-supabase.ts          # Auth helpers
+│   ├── cluster-progress.ts       # Cluster-based progress tracking
+│   ├── courseStore.ts            # Course data store
+│   ├── guard.ts                  # Lesson access guards
+│   ├── learn-guard.ts            # Learn page guards
+│   ├── lesson-watched.ts         # Lesson watched state
+│   ├── progress.ts               # Progress tracking (localStorage)
+│   ├── progress-supabase.ts      # Progress tracking (Supabase)
+│   ├── purchases.ts              # Purchase helpers (server-only)
+│   ├── watch-time.ts             # Watch time tracking
+│   └── ...                       # Other utilities
 ├── data/
-│   └── course.ts                  # Course data (20 lessons với quiz)
-├── styles/
-│   └── titan.css                  # Titan theme styles (nếu có)
-├── scripts/
-│   └── generate-icons.js          # Script tạo icons từ SVG
-├── middleware.ts                  # Next.js middleware (session refresh)
-├── next.config.mjs                # Next.js config + PWA
-├── package.json                   # Dependencies
-├── tailwind.config.ts             # Tailwind config
-├── tsconfig.json                  # TypeScript config
-└── README.md                      # Hướng dẫn setup
+│   └── course.ts                 # Course data (20 lessons)
+├── supabase/
+│   └── schema.sql                # Database schema
+├── public/                       # Static assets
+│   ├── icons/                    # PWA icons
+│   ├── manifest.webmanifest      # PWA manifest
+│   └── ...
+└── scripts/
+    └── generate-icons.js         # Icon generation script
 ```
 
 ---
 
-## 🛠️ CÔNG NGHỆ SỬ DỤNG
-
-### Frontend
-- **Next.js 14.2.0** (App Router)
-- **React 18.3.0**
-- **TypeScript 5**
-- **Tailwind CSS 3.4.1**
-- **shadcn/ui** (Component library)
-- **lucide-react 0.400.0** (Icons)
-
-### Backend & Database
-- **Supabase**:
-  - Authentication (Email + OTP/Password)
-  - PostgreSQL Database
-  - Row Level Security (RLS)
-  - `@supabase/supabase-js 2.39.0`
-  - `@supabase/ssr 0.1.0`
-- **Next.js API Routes** (Server-side, Node.js runtime)
-
-### PWA
-- **next-pwa 5.6.0** (Service Worker)
-- **Web App Manifest**
-- **Workbox** (runtime caching)
-
-### Utilities
-- **class-variance-authority 0.7.0** (Component variants)
-- **clsx 2.1.1** + **tailwind-merge 2.4.0** (Class utilities)
-
-### Development
-- **ESLint** + **eslint-config-next**
-- **PostCSS** + **Autoprefixer**
-- **TypeScript** strict mode
-
----
-
-## 📍 ROUTES & PAGES
-
-### Public Routes
-- **`/`** - Landing page
-  - Hero section với logo
-  - Benefits section (3 cards)
-  - Roadmap section (4 giai đoạn)
-  - FAQ section (4 câu hỏi)
-  - CTA section
-  - Footer
-  - Install PWA Banner
-
-- **`/auth`** - Đăng nhập
-  - Email input
-  - OTP (Magic Link) hoặc Password
-  - Auto redirect sau login
-
-- **`/courses`** - Danh sách khóa học
-  - Hiển thị CourseCard
-  - Link đến chi tiết khóa học
-
-- **`/courses/[courseId]`** - Chi tiết khóa học
-  - Thông tin khóa học
-  - ActivationCard (nếu chưa kích hoạt)
-  - Nút "Mua khóa học" (nếu chưa mua)
-  - Dialog chuyển khoản (số TK, tên, số tiền)
-  - Copy buttons
-  - Link Zalo
-
-- **`/learn/[courseId]/[lessonId]`** - Trang học bài
-  - Progress bar tổng khóa
-  - Lesson sidebar (desktop/mobile)
-  - Video YouTube embed
-  - Watch time tracking
-  - Đánh dấu "Đã xem" (sau khi xem ≥80%)
-  - Quiz panel (5 câu hỏi)
-  - Confetti khi pass quiz
-  - Nút "Bài tiếp theo"
-
-- **`/keygen`** - Key Generator (public)
-  - Nhập Device ID
-  - Generate key (check admin qua API)
-  - Copy key
-
-- **`/start`** - Trang hướng dẫn học viên
-  - 4 bước hướng dẫn
-
-- **`/offline`** - Trang offline fallback
-  - Thông báo offline
-  - Hướng dẫn kiểm tra kết nối
-
-### Protected Routes (Require Auth)
-- **`/account/billing`** - Hóa đơn đã thanh toán
-  - Danh sách purchases với status "paid"
-  - Thông tin chi tiết: course, amount, date
-
-### Admin Routes (Require Admin Email)
-- **`/admin`** - Admin dashboard
-  - Overview statistics
-  - Quick links
-
-- **`/admin/keygen`** - Key Generator (admin UI)
-  - Nhập Device ID
-  - Generate key
-  - Copy key
-
-- **`/admin/purchases`** - Duyệt đơn hàng
-  - Danh sách tất cả purchases
-  - Filter theo status
-  - Approve/Reject buttons
-  - Thông tin chi tiết: email, course, amount, note, date
-
-### API Routes
-- **`/api/generate-key`** - Tạo Activation Key
-  - Method: POST
-  - Body: `{ deviceId: string, courseId?: string }`
-  - Headers: `x-admin-token` (optional) hoặc check Supabase session
-  - Response: `{ ok: boolean, key?: string, message?: string }`
-  - Admin only
-
-- **`/api/verify-key`** - Verify Activation Key
-  - Method: POST
-  - Body: `{ deviceId: string, key: string, courseId: string }`
-  - Response: `{ ok: boolean, message?: string }`
-  - Public (nhưng cần key hợp lệ)
-
-- **`/auth/callback`** - Supabase OAuth callback
-  - Handle OAuth redirects
-  - Auto login
-
----
-
-## 🗄️ DATABASE SCHEMA (Supabase)
+## 🗄️ DATABASE SCHEMA
 
 ### Tables
 
 #### 1. `profiles`
+User profiles với role-based access control.
+
 ```sql
-- id (UUID, PK, references auth.users)
-- full_name (TEXT, nullable)
-- phone (TEXT, nullable)
-- created_at (TIMESTAMP WITH TIME ZONE)
-- updated_at (TIMESTAMP WITH TIME ZONE)
+CREATE TABLE profiles (
+  id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+  full_name TEXT,
+  phone TEXT,
+  role TEXT DEFAULT 'user' CHECK (role IN ('user', 'admin')),
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
 ```
 
 **RLS Policies:**
-- Users can SELECT own profile
-- Users can UPDATE own profile
-- Users can INSERT own profile
+- Users can view/update own profile
+- Admins can view all profiles (via service role)
 
 #### 2. `purchases`
+Purchase records với status tracking.
+
 ```sql
-- id (UUID, PK, default gen_random_uuid())
-- user_id (UUID, NOT NULL, references auth.users)
-- course_id (TEXT, NOT NULL)
-- status (TEXT, NOT NULL, default 'pending', CHECK: 'pending'|'paid'|'rejected')
-- amount_vnd (INTEGER, default 0)
-- transaction_code (TEXT, nullable)
-- note (TEXT, nullable)
-- created_at (TIMESTAMP WITH TIME ZONE)
-- updated_at (TIMESTAMP WITH TIME ZONE)
+CREATE TABLE purchases (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  course_id TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'paid', 'rejected')),
+  amount NUMERIC DEFAULT 0,
+  note TEXT,
+  proof_url TEXT,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  UNIQUE(user_id, course_id)
+);
 ```
+
+**RLS Policies:**
+- Users can view own purchases
+- Users can insert own purchases (only 'pending')
+- Admins can view/update all purchases
 
 **Indexes:**
 - `idx_purchases_user_id` on `user_id`
 - `idx_purchases_status` on `status`
-
-**RLS Policies:**
-- Users can SELECT own purchases
-- Users can INSERT own purchases
-- Admin can view all (handled in app logic with service role)
+- `idx_purchases_course_id` on `course_id`
 
 #### 3. `progress`
+Learning progress tracking.
+
 ```sql
-- id (UUID, PK, default gen_random_uuid())
-- user_id (UUID, NOT NULL, references auth.users)
-- course_id (TEXT, NOT NULL)
-- unlocked_index (INTEGER, default 0)
-- completed_lessons (TEXT[], default '{}')
-- watch_seconds (JSONB, default '{}')
-- updated_at (TIMESTAMP WITH TIME ZONE)
-- UNIQUE(user_id, course_id)
+CREATE TABLE progress (
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  course_id TEXT NOT NULL,
+  unlocked_lesson_index INTEGER DEFAULT 0,
+  completed_lessons JSONB DEFAULT '[]',
+  watch_seconds JSONB DEFAULT '{}',  -- {lessonId: seconds}
+  self_assessments JSONB DEFAULT '{}',  -- {lessonId: {understandPercent, timestamp}}
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  PRIMARY KEY (user_id, course_id)
+);
 ```
+
+**RLS Policies:**
+- Users can view/update own progress
 
 **Indexes:**
 - `idx_progress_user_course` on `(user_id, course_id)`
 
-**RLS Policies:**
-- Users can SELECT own progress
-- Users can INSERT own progress
-- Users can UPDATE own progress
+#### 4. `video_call_bookings`
+Video call booking requests.
 
-#### 4. `quiz_attempts`
 ```sql
-- id (UUID, PK, default gen_random_uuid())
-- user_id (UUID, NOT NULL, references auth.users)
-- course_id (TEXT, NOT NULL)
-- lesson_id (TEXT, NOT NULL)
-- score (INTEGER, NOT NULL, 0-100)
-- passed (BOOLEAN, NOT NULL)
-- created_at (TIMESTAMP WITH TIME ZONE)
+CREATE TABLE video_call_bookings (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  course_id TEXT NOT NULL,
+  cluster_number INTEGER NOT NULL,
+  phone TEXT NOT NULL,
+  preferred_time TEXT,
+  note TEXT,
+  status TEXT DEFAULT 'pending' CHECK (status IN ('pending', 'scheduled', 'completed', 'cancelled')),
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
 ```
-
-**Indexes:**
-- `idx_quiz_attempts_user` on `(user_id, course_id, lesson_id)`
 
 **RLS Policies:**
-- Users can SELECT own quiz attempts
-- Users can INSERT own quiz attempts
-
-### Functions & Triggers
-- **`update_updated_at_column()`**: Auto-update `updated_at` timestamp
-- **Triggers**: Applied to `profiles`, `purchases`, `progress`
+- Users can view/insert own bookings
+- Admins can view/update all bookings
 
 ---
 
-## 🔐 ENVIRONMENT VARIABLES
+## 🔌 API ROUTES
 
-### Required (Production)
-```env
-# Supabase
-NEXT_PUBLIC_SUPABASE_URL=https://xxx.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJxxx...
-SUPABASE_SERVICE_ROLE_KEY=eyJxxx...
+### Public APIs
 
-# Admin
-ADMIN_EMAIL=truongthanh160588@gmail.com
-# Hoặc (support multiple admins)
-ADMIN_EMAILS=truongthanh160588@gmail.com,admin2@example.com
-NEXT_PUBLIC_ADMIN_EMAILS=truongthanh160588@gmail.com,admin2@example.com
+#### `POST /api/purchases/create`
+Tạo purchase mới (pending).
 
-# Activation System
-ACTIVATION_SECRET=your-secret-key-min-32-chars
-```
-
-### Optional
-```env
-ADMIN_TOKEN=your-admin-token (for API access via x-admin-token header)
-NEXT_PUBLIC_BASE_URL=https://hoc-am-thanh-tu-goc.vercel.app
-NEXT_PUBLIC_ACTIVATION_SECRET=your-secret (fallback, not recommended)
-```
-
-**Fallback Order:**
-- `ADMIN_EMAIL` → `NEXT_PUBLIC_ADMIN_EMAIL`
-- `ADMIN_EMAILS` → `NEXT_PUBLIC_ADMIN_EMAILS`
-- `ACTIVATION_SECRET` → `NEXT_PUBLIC_ACTIVATION_SECRET`
-
----
-
-## 📦 DEPENDENCIES
-
-### Production Dependencies
+**Request:**
 ```json
 {
-  "next": "^14.2.0",
-  "react": "^18.3.0",
-  "react-dom": "^18.3.0",
-  "lucide-react": "^0.400.0",
-  "class-variance-authority": "^0.7.0",
-  "clsx": "^2.1.1",
-  "tailwind-merge": "^2.4.0",
-  "next-pwa": "^5.6.0",
-  "@supabase/supabase-js": "^2.39.0",
-  "@supabase/ssr": "^0.1.0"
+  "courseId": "audio-goc-01",
+  "amount": 1000000,
+  "note": "Chuyển khoản ngân hàng"
 }
 ```
 
-### Development Dependencies
+**Response:**
 ```json
 {
-  "@types/node": "^20",
-  "@types/react": "^18",
-  "@types/react-dom": "^18",
-  "typescript": "^5",
-  "tailwindcss": "^3.4.1",
-  "postcss": "^8",
-  "autoprefixer": "^10.4.19",
-  "eslint": "^8",
-  "eslint-config-next": "^14.2.0"
+  "success": true,
+  "purchase": {
+    "id": "...",
+    "status": "pending",
+    ...
+  }
+}
+```
+
+#### `GET /api/purchases/status?courseId=...`
+Lấy purchase status của user hiện tại.
+
+**Response:**
+```json
+{
+  "purchase": {
+    "status": "paid",
+    ...
+  }
+}
+```
+
+#### `POST /api/verify-key`
+Verify activation key (deprecated - không còn dùng).
+
+#### `GET /api/check-activation?courseId=...`
+Check activation status (deprecated - không còn dùng).
+
+### Admin APIs
+
+#### `GET /api/admin/purchases?status=pending`
+List purchases (admin only).
+
+**Response:**
+```json
+{
+  "purchases": [
+    {
+      "id": "...",
+      "user_email": "...",
+      "course_id": "...",
+      "status": "pending",
+      ...
+    }
+  ]
+}
+```
+
+#### `POST /api/admin/purchases/update`
+Update purchase status (admin only).
+
+**Request:**
+```json
+{
+  "purchaseId": "...",
+  "status": "paid"  // or "rejected"
+}
+```
+
+#### `POST /api/video-call/booking`
+Book video call.
+
+**Request:**
+```json
+{
+  "courseId": "audio-goc-01",
+  "clusterNumber": 1,
+  "phone": "0123456789",
+  "preferredTime": "Tối thứ 2",
+  "note": "Cần hỗ trợ về phase"
 }
 ```
 
 ---
 
-## 🎨 UI COMPONENTS (shadcn/ui)
+## 🎨 COMPONENTS & UI
 
 ### Core Components
-- **`Button`** - Buttons với variants (primary, outline, ghost, size: sm, md, lg)
-- **`Card`** - Card container (CardHeader, CardTitle, CardDescription, CardContent)
-- **`Dialog`** - Modal dialogs
-- **`Input`** - Text inputs
-- **`OTPInput`** - 6-digit OTP input (cho magic link)
-- **`Sheet`** - Sidebar/mobile menu
-- **`Toast`** - Toast notifications (success, error)
-- **`Badge`** - Badges/labels (default, outline)
-- **`Alert`** - Alert messages
-- **`Accordion`** - FAQ accordion
-- **`Progress`** - Progress bars
-- **`Skeleton`** - Loading skeletons
 
-### Custom Components
-- **`ActivationCard`** - Card kích hoạt Device ID với input key
-- **`AppShell`** - Layout wrapper (Topbar, Footer, Navigation)
-- **`Confetti`** - Animation khi pass quiz
-- **`CourseCard`** - Card khóa học
-- **`InstallPwaBanner`** - Banner cài PWA
-- **`LessonSidebar`** - Sidebar danh sách bài với trạng thái
-- **`ProgressBar`** - Progress bar tổng khóa học
-- **`QuizPanel`** - Panel quiz với 5 câu hỏi
-- **`SupportForm`** - Form gửi thông tin ca khó
-- **`YouTubeEmbed`** - Component embed YouTube với watch time tracking
+#### `LessonSelfAssessment`
+Component tự đánh giá cho từng bài học.
 
----
+**Props:**
+- `lessonId`, `courseId`, `userId`
+- `watchPercent`, `watchSeconds`, `requiredSeconds`
+- `isWatched`: boolean
+- `onMarkWatched`: () => void
+- `onContinue`: () => void
 
-## 🔄 WORKFLOW & LOGIC
+**Features:**
+- Hiển thị % đã xem video
+- Nút "Đánh dấu đã xem" (chỉ bật khi ≥ 85%)
+- Tự đánh giá mức độ hiểu (0%, 50%, 70%, 85%, 100%)
+- Nếu hiểu < 70% → hiện VideoCallBooking
+- Nếu hiểu ≥ 70% → hiện nút "Tiếp tục bài tiếp theo"
 
-### 1. User Registration & Login
-1. User vào `/auth`
-2. Nhập email → Chọn OTP hoặc Password
-3. **Nếu OTP**:
-   - Supabase gửi magic link email
-   - User click link → Redirect về `/auth/callback`
-   - Auto login → Redirect về `/courses`
-4. **Nếu Password**:
-   - Nhập password → Login
-   - Redirect về `/courses`
-5. Session được lưu trong cookies (Supabase SSR)
+#### `SelfAssessmentPanel`
+Component tự đánh giá cho cụm bài (5 bài/cụm).
 
-### 2. Purchase Flow
-1. User vào `/courses/[courseId]`
-2. Bấm "Mua khóa học" (3.000.000 VNĐ)
-3. Dialog hiện:
-   - Thông tin chuyển khoản (Vietcombank Bạc Liêu)
-   - Copy buttons (số TK, tên, số tiền)
-   - Copy tin nhắn Zalo mẫu
-4. User chuyển khoản → Bấm "Tôi đã thanh toán"
-5. Tạo `purchase` record với `status="pending"`
-6. User nhắn Zalo (có template sẵn) với thông tin đơn hàng
-7. Admin vào `/admin/purchases` → Xem đơn hàng pending
-8. Admin bấm "Duyệt" → `status` → `"paid"`
-9. User có thể vào học (`/learn`)
+**Features:**
+- 3 câu hỏi tự đánh giá:
+  1. % nội dung đã xem
+  2. % mức độ hiểu
+  3. Phần nào còn mơ hồ nhất (optional)
+- Unlock cụm tiếp theo nếu hiểu ≥ 70%
+- Video call booking nếu hiểu < 70%
 
-### 3. Activation Flow
-1. User vào `/courses/[courseId]` (chưa activated)
-2. Hiện `ActivationCard` với Device ID (auto generate, lưu localStorage)
-3. User copy Device ID → Gửi cho admin (Zalo/Email)
-4. Admin vào `/admin/keygen` hoặc `/keygen`:
-   - Nhập Device ID
-   - Bấm "Generate Key"
-   - API `/api/generate-key` tạo key (HMAC SHA256)
-   - Format: `HATG-XXXXX-XXXXX-XXXXX-XXXXX`
-5. Admin gửi Key cho user
-6. User nhập Key vào `ActivationCard` → Bấm "Kích hoạt"
-7. API `/api/verify-key` verify key (server-side)
-8. Nếu hợp lệ → Lưu activation state vào localStorage
-9. User có thể vào học (`/learn`)
+#### `YouTubeEmbed`
+YouTube video player với watch time tracking.
 
-### 4. Learning Flow
-1. User vào `/learn/[courseId]/[lessonId]`
-2. **Guard checks** (theo thứ tự):
-   - ✅ Đã đăng nhập? → Redirect `/auth`
-   - ✅ Đã mua khóa học? (`purchase.status === "paid"`) → Redirect `/courses/[courseId]`
-   - ✅ Đã kích hoạt? (`activation[courseId].activated === true`) → Redirect `/courses/[courseId]`
-   - ✅ Bài học đã unlock? (`lessonIndex <= progress.unlockedLessonIndex`) → Redirect `/courses/[courseId]`
-3. **Nếu pass guard**:
-   - Load video YouTube embed
-   - Track watch time (seconds) → Update mỗi 10s (debounced)
-   - Hiện progress bar (đã xem / cần xem)
-   - Khi đủ thời lượng (≥80% hoặc ≥5 phút):
-     - Enable nút "Đánh dấu đã xem"
-     - User bấm → Mark lesson as watched
-   - Sau khi đánh dấu → Unlock quiz
-   - Làm quiz (5 câu hỏi):
-     - Submit → Tính score
-     - Nếu ≥80% → Pass → Unlock bài tiếp theo
-     - Lưu attempt vào `quiz_attempts`
-     - Hiện Confetti animation
-   - Unlock bài tiếp theo:
-     - Update `progress.unlocked_index`
-     - Update `progress.completed_lessons`
-4. **Progress sync**:
-   - Watch time: Debounced update mỗi 10s → `progress.watch_seconds[lessonId]`
-   - Quiz pass: Immediate update → `progress.unlocked_index`, `progress.completed_lessons`
-   - Fallback localStorage nếu Supabase lỗi
-   - Auto-sync từ DB về local khi load page
+**Features:**
+- YouTube IFrame API integration
+- Real-time watch time tracking
+- Fallback iframe nếu API không load
+- Update watch time mỗi 2 giây
+- Debounced updates (5 giây)
 
-### 5. Progress Tracking
-- **Watch Time**: Lưu seconds per lesson (JSONB: `{ [lessonId]: number }`)
-- **Unlocked Index**: Index bài học cao nhất đã unlock (0-based)
-- **Completed Lessons**: Array các lesson ID đã hoàn thành
-- **Sync Strategy**:
-  - Load page → Fetch từ Supabase → Sync to localStorage
-  - Update → Update localStorage → Debounced sync to Supabase
-  - Offline → Use localStorage only
+#### `VideoCallBooking`
+Form đăng ký video call 1-1.
+
+**Fields:**
+- Phone (required)
+- Preferred time (optional)
+- Note (optional)
+
+**Flow:**
+- Submit → API `/api/video-call/booking`
+- Success → Callback `onBookingComplete`
+- Vẫn cho phép tiếp tục sau khi booking
+
+#### `LessonSidebar`
+Sidebar danh sách bài học.
+
+**Features:**
+- Hiển thị tất cả 20 bài học
+- Trạng thái: locked/unlocked/completed
+- Practice Tool Panel (sau Lesson 3)
+- Link đến từng bài học
+
+### UI Components (shadcn/ui)
+
+- `Button` - Buttons với variants
+- `Card` - Card container
+- `Progress` - Progress bar
+- `Accordion` - FAQ accordion
+- `Alert` - Alert messages
+- `Badge` - Badges/labels
+- `Input` - Input fields
+- `Sheet` - Sidebar sheet (mobile)
+- `Toast` - Toast notifications
 
 ---
 
-## 📊 STATISTICS
+## 🔄 LUỒNG HOẠT ĐỘNG
 
-### Code Metrics
-- **Total Routes**: 17 routes
-  - Public: 8 routes
-  - Protected: 1 route
-  - Admin: 3 routes
-  - API: 2 routes
-  - Special: 3 routes (offline, sitemap, callback)
-- **Components**: 20+ components
-  - UI: 12 components
-  - Custom: 8+ components
-- **API Routes**: 2 routes
-- **Database Tables**: 4 tables
-- **Lines of Code**: ~6,000+ lines
+### 1. Luồng Mua Khóa Học
 
-### Features Count
-- ✅ 11 major features completed
-- ✅ 20 lessons with quizzes (5 questions each)
-- ✅ Full PWA support
-- ✅ Complete auth system (OTP + Password)
-- ✅ Payment & billing system
-- ✅ Admin panel (3 pages)
-- ✅ Device activation system
-- ✅ Progress tracking (watch time + quiz)
-- ✅ Offline support
-- ✅ SEO optimized
-- ✅ Responsive design
+```
+User → /courses/[courseId]
+  ↓
+Chưa login → Redirect /auth
+  ↓
+Đã login → Check purchase status
+  ↓
+Chưa mua → Hiện nút "Đăng ký khóa học"
+  ↓
+Click → POST /api/purchases/create
+  ↓
+Status = "pending"
+  ↓
+Admin → /admin/purchases → Approve
+  ↓
+Status = "paid" → User có thể học
+```
+
+### 2. Luồng Học Bài
+
+```
+User → /learn/[courseId]/[lessonId]
+  ↓
+Server Guard (layout.tsx):
+  - Check auth
+  - Check purchase.status = 'paid'
+  ↓
+Client Load:
+  - Load user
+  - Load progress
+  - Load watch time
+  ↓
+Step 1: Xem Video
+  - YouTubeEmbed tracks watch time
+  - Update mỗi 2 giây
+  - Sync to DB mỗi 10 giây
+  ↓
+Step 2: Tự Đánh Giá Nhanh
+  - Hiển thị % đã xem
+  - Nút "Đánh dấu đã xem" (≥ 85%)
+  - Tự đánh giá mức độ hiểu
+  ↓
+Nếu hiểu ≥ 70%:
+  - Nút "Tiếp tục bài tiếp theo"
+  - Unlock bài tiếp theo
+  ↓
+Nếu hiểu < 70%:
+  - Hiện VideoCallBooking
+  - Sau booking → vẫn cho tiếp tục
+```
+
+### 3. Luồng Tự Đánh Giá Cụm Bài
+
+```
+Sau khi hoàn thành 5 bài trong cụm:
+  ↓
+Hiện SelfAssessmentPanel
+  ↓
+3 câu hỏi:
+  1. % nội dung đã xem
+  2. % mức độ hiểu
+  3. Phần nào còn mơ hồ nhất
+  ↓
+Nếu hiểu ≥ 70%:
+  - Unlock cụm tiếp theo
+  ↓
+Nếu hiểu < 70%:
+  - Hiện VideoCallBooking
+  - Sau booking → unlock cụm tiếp theo
+```
+
+### 4. Luồng Watch Time Tracking
+
+```
+YouTubeEmbed:
+  - Load YouTube IFrame API
+  - Init player
+  - Track currentTime mỗi 2 giây
+  ↓
+onWatchTimeUpdate(currentTime, duration):
+  - Update localStorage (watch-time.ts)
+  - Debounced update (5 giây)
+  ↓
+Sync to Supabase:
+  - updateWatchTimeSupabase()
+  - Store max(currentTime) per lesson
+  - Update mỗi 10 giây
+```
+
+---
+
+## 🔐 SECURITY & GUARDS
+
+### Server-Side Guards
+
+#### `app/learn/[courseId]/[lessonId]/layout.tsx`
+Server component guard cho learn pages.
+
+**Checks:**
+1. Authentication (must be logged in)
+2. Purchase status (must be 'paid')
+3. Lesson unlock (must unlock previous lessons)
+
+**Redirects:**
+- Not logged in → `/auth`
+- Not purchased → `/courses/[courseId]`
+- Lesson locked → `/courses/[courseId]`
+
+#### `app/admin/*/layout.tsx`
+Server component guard cho admin pages.
+
+**Checks:**
+- User must have `profiles.role = 'admin'`
+
+**Redirects:**
+- Not admin → `/courses`
+
+### Client-Side Guards
+
+#### `lib/learn-guard.ts`
+Client-side guard helpers.
+
+**Functions:**
+- `checkLearnAccess()` - Check if user can access lesson
+- Supports `is_preview` lessons (no payment required)
+
+#### `lib/guard.ts`
+Lesson access guards.
+
+**Functions:**
+- `canAccessLesson()` - Check lesson unlock status
+- `getLessonIndex()` - Get lesson index from ID
+
+---
+
+## 📊 DATA FLOW
+
+### Progress Tracking
+
+**LocalStorage (watch-time.ts):**
+```typescript
+{
+  watchSeconds: number,
+  videoDuration: number,
+  lastUpdated: number
+}
+```
+
+**Supabase (progress table):**
+```json
+{
+  "watch_seconds": {
+    "lesson01": 1200,
+    "lesson02": 1800,
+    ...
+  },
+  "unlocked_lesson_index": 5,
+  "completed_lessons": ["lesson01", "lesson02"],
+  "self_assessments": {
+    "lesson01": {
+      "understandPercent": 85,
+      "timestamp": 1234567890
+    }
+  }
+}
+```
+
+### Purchase Flow
+
+**States:**
+- `pending` - Chờ admin duyệt
+- `paid` - Đã duyệt, có thể học
+- `rejected` - Bị từ chối
+
+**RLS:**
+- Users chỉ có thể tạo `pending` purchases
+- Admins có thể update status
 
 ---
 
 ## 🚀 DEPLOYMENT
 
-### Current Status
-- **Platform**: Vercel
-- **URL**: `https://hoc-am-thanh-tu-goc.vercel.app`
-- **Status**: ✅ Live & Production Ready
-- **Auto Deploy**: Enabled (GitHub push → Vercel deploy)
-- **Build**: Next.js 14 (App Router)
-- **Runtime**: Node.js
+### Vercel Deployment
 
-### Build Commands
-```bash
-npm run build    # Build production
-npm run start    # Start production server
-npm run dev      # Development server
-npm run lint     # Lint code
+**Environment Variables:**
+```
+NEXT_PUBLIC_SUPABASE_URL=https://xxx.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=xxx
+SUPABASE_SERVICE_ROLE_KEY=xxx
+ACTIVATION_SECRET=xxx (deprecated)
 ```
 
-### Build Output
-- Static pages: 17 pages
-- Dynamic routes: 3 routes (`[courseId]`, `[lessonId]`)
-- API routes: 2 routes
-- Middleware: ~70.2 kB
-- First Load JS: ~87-167 kB per page
-- Service Worker: Generated by next-pwa
+**Build Settings:**
+- Framework: Next.js
+- Build Command: `npm run build`
+- Output Directory: `.next`
+- Node Version: 20.x
 
-### Environment Variables (Vercel)
-Cần set các biến sau trong Vercel Dashboard:
-- `NEXT_PUBLIC_SUPABASE_URL`
-- `NEXT_PUBLIC_SUPABASE_ANON_KEY`
-- `SUPABASE_SERVICE_ROLE_KEY`
-- `ADMIN_EMAIL` hoặc `ADMIN_EMAILS`
-- `ACTIVATION_SECRET`
+**Auto Deploy:**
+- Push to `main` branch → Auto deploy
+- Preview deployments cho PRs
 
----
+### Database Setup
 
-## 📝 TODO / FUTURE ENHANCEMENTS
-
-### Potential Improvements
-- [ ] Video progress bar (seek to watched position)
-- [ ] Certificate generation sau khi hoàn thành khóa học
-- [ ] Discussion forum / Comments
-- [ ] Email notifications (quiz pass, new lesson unlock)
-- [ ] Analytics dashboard (admin)
-- [ ] Multi-language support
-- [ ] Video subtitles/transcripts
-- [ ] Download course materials (PDF, audio files)
-- [ ] Mobile app (React Native)
-- [ ] Payment gateway integration (VNPay, MoMo)
-- [ ] Social sharing (share progress)
-- [ ] Leaderboard (top learners)
-- [ ] Course reviews/ratings
-- [ ] Video quality selector
-- [ ] Playback speed control
-- [ ] Notes/Bookmarks per lesson
+1. Run `supabase/schema.sql` trên Supabase SQL Editor
+2. Enable RLS cho tất cả tables
+3. Create admin user:
+   ```sql
+   UPDATE profiles SET role = 'admin' WHERE id = 'user-uuid';
+   ```
 
 ---
 
-## 👤 CONTACT & SUPPORT
+## 🔧 NÂNG CẤP & THÊM TÍNH NĂNG
 
-**Developer**: Trương Thanh  
-**Zalo**: 0974 70 4444  
-**Email**: truongthanh160588@gmail.com
+### Thêm Bài Học Mới
+
+**File:** `data/course.ts`
+
+```typescript
+// Thêm vào mảng titles
+const titles = [
+  // ... existing titles
+  "Bài học mới",  // Bài 21
+];
+
+// Thêm vào mảng youtubeIds
+const youtubeIds = [
+  // ... existing IDs
+  "NEW_YOUTUBE_ID",  // Bài 21
+];
+```
+
+### Thêm API Route Mới
+
+**File:** `app/api/[route-name]/route.ts`
+
+```typescript
+import { NextRequest, NextResponse } from "next/server";
+import { createClient } from "@/lib/supabase/server";
+
+export async function GET(request: NextRequest) {
+  const supabase = createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  
+  if (!user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+  
+  // Your logic here
+  
+  return NextResponse.json({ success: true });
+}
+```
+
+### Thêm Component Mới
+
+**File:** `components/NewComponent.tsx`
+
+```typescript
+"use client";
+
+import { useState } from "react";
+import { Card } from "@/components/ui/card";
+
+export function NewComponent() {
+  // Your component logic
+  return <Card>...</Card>;
+}
+```
+
+### Thêm Database Table
+
+1. **Update Schema:** `supabase/schema.sql`
+2. **Add RLS Policies**
+3. **Create Helper:** `lib/new-table.ts` (server-only)
+4. **Create API:** `app/api/new-table/route.ts`
+
+### Thêm Guard Mới
+
+**File:** `lib/new-guard.ts`
+
+```typescript
+import { createClient } from "@/lib/supabase/server";
+
+export async function checkNewAccess(userId: string): Promise<boolean> {
+  const supabase = createClient();
+  // Your check logic
+  return true;
+}
+```
+
+**Usage trong layout:**
+```typescript
+// app/[route]/layout.tsx
+const hasAccess = await checkNewAccess(user.id);
+if (!hasAccess) {
+  redirect("/unauthorized");
+}
+```
 
 ---
 
-## 📄 LICENSE
+## 🐛 TROUBLESHOOTING
 
-Proprietary - All rights reserved
+### Video không track watch time
+
+**Nguyên nhân:**
+- YouTube IFrame API không load
+- Player chưa ready
+
+**Giải pháp:**
+- Check console logs
+- Fallback iframe đã được implement
+- Check `watch-time.ts` localStorage
+
+### Purchase không hiển thị
+
+**Nguyên nhân:**
+- RLS policy chặn
+- User chưa login
+
+**Giải pháp:**
+- Check Supabase RLS policies
+- Check user session
+- Check API response
+
+### Admin không truy cập được
+
+**Nguyên nhân:**
+- `profiles.role` chưa set 'admin'
+
+**Giải pháp:**
+```sql
+UPDATE profiles SET role = 'admin' WHERE id = 'user-uuid';
+```
+
+### Build lỗi TypeScript
+
+**Nguyên nhân:**
+- Type mismatch
+- Missing imports
+
+**Giải pháp:**
+- Check `tsconfig.json`
+- Run `npm run build` để xem errors
+- Fix type definitions
 
 ---
 
-**Báo cáo được tạo tự động từ codebase**  
-**Cập nhật lần cuối**: 2024
+## 📝 NOTES QUAN TRỌNG
+
+### Deprecated Features
+
+1. **Device Activation System** - Đã bỏ, không còn dùng
+   - Files: `ActivationCard.tsx`, `app/api/generate-key`, `app/api/verify-key`
+   - Có thể xóa sau này
+
+2. **Quiz System** - Đã thay bằng Self Assessment
+   - Files: `QuizPanel.tsx` (có thể xóa)
+   - Data: `quiz` field trong `Lesson` interface (có thể xóa)
+
+### Current Features
+
+1. **Self Assessment** - Hệ thống mới
+   - Per lesson: `LessonSelfAssessment`
+   - Per cluster: `SelfAssessmentPanel`
+
+2. **Watch Time Tracking** - Chính xác với YouTube API
+   - Minimum: 85% video duration
+   - Real-time updates
+
+3. **Video Call Booking** - Hỗ trợ 1-1
+   - Trigger khi hiểu < 70%
+   - Vẫn cho tiếp tục sau booking
+
+### Best Practices
+
+1. **Server-Side Guards** - Luôn check ở server
+2. **RLS Policies** - Bảo mật database
+3. **TypeScript** - Strict mode enabled
+4. **Error Handling** - Try-catch trong API routes
+5. **Debouncing** - Watch time updates
+6. **LocalStorage Fallback** - Offline support
+
+---
+
+## 📚 TÀI LIỆU THAM KHẢO
+
+- [Next.js 14 Docs](https://nextjs.org/docs)
+- [Supabase Docs](https://supabase.com/docs)
+- [shadcn/ui](https://ui.shadcn.com)
+- [YouTube IFrame API](https://developers.google.com/youtube/iframe_api_reference)
+
+---
+
+**Lưu ý:** Báo cáo này được cập nhật lần cuối vào 2024. Khi nâng cấp dự án, vui lòng cập nhật báo cáo này để đảm bảo tính chính xác.
