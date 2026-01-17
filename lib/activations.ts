@@ -18,7 +18,7 @@ export async function getActiveActivationCount({
   userId,
   courseId,
 }: ActivationParams): Promise<number> {
-  const supabase = getServiceClient();
+  const supabase = getServiceClient() as any;
 
   const { count, error } = await supabase
     .from("activations")
@@ -45,7 +45,7 @@ export async function isDeviceActive({
 }: Required<ActivationParams>): Promise<boolean> {
   if (!deviceId) return false;
 
-  const supabase = getServiceClient();
+  const supabase = getServiceClient() as any;
 
   const { data, error } = await supabase
     .from("activations")
@@ -76,7 +76,7 @@ export async function insertActivation({
     return { data: null, error: { message: "deviceId is required" } };
   }
 
-  const supabase = getServiceClient();
+  const supabase = getServiceClient() as any;
 
   const { data, error } = await supabase
     .from("activations")

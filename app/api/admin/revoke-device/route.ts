@@ -51,7 +51,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Revoke device bằng service role
-    const serviceSupabase = getServiceClient();
+    const serviceSupabase = getServiceClient() as any;
     const { error } = await serviceSupabase
       .from("activations")
       .update({

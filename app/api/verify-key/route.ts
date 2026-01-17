@@ -134,7 +134,7 @@ export async function POST(request: NextRequest) {
       if (activationError.code === "23505") {
         // Try to reactivate (update revoked_at to null) - dùng service role
         const { getServiceClient } = await import("@/lib/supabase/service");
-        const serviceSupabase = getServiceClient();
+        const serviceSupabase = getServiceClient() as any;
         
         const { error: updateError } = await serviceSupabase
           .from("activations")

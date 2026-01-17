@@ -44,7 +44,7 @@ export async function GET(request: NextRequest) {
     const status = (searchParams.get("status") as "active" | "revoked" | "all") || "all";
 
     // Dùng service role để list activations (bypass RLS)
-    const serviceSupabase = getServiceClient();
+    const serviceSupabase = getServiceClient() as any;
     let query = serviceSupabase
       .from("activations")
       .select("*")
@@ -72,9 +72,9 @@ export async function GET(request: NextRequest) {
 
     // Lấy emails từ auth.users (dùng service role)
     const userIds = [...new Set((activations || []).map((a: any) => a.user_id))];
-    const { data: usersData } = await serviceSupabase.auth.admin.listUsers();
+    const { data: usersData } = await (serviceSupabase.auth.admin as any).listUsers();
     const emailMap = new Map(
-      (usersData?.users || []).map((u) => [u.id, u.email])
+      (usersData?.users || []).map((u: any) => [u.id, u.email])
     );
 
     // Format response với email
