@@ -17,28 +17,8 @@ const YouTubeEmbed = dynamic(() => import("@/components/YouTubeEmbed").then(mod 
   ),
 });
 
-const QuizPanel = dynamic(() => import("@/components/QuizPanel").then(mod => ({ default: mod.QuizPanel })), {
-  loading: () => (
-    <Card>
-      <CardHeader>
-        <div className="h-6 w-48 bg-gray-800 rounded animate-pulse mb-2" />
-        <div className="h-4 w-64 bg-gray-800 rounded animate-pulse" />
-      </CardHeader>
-      <CardContent>
-        <div className="space-y-4">
-          {[1, 2, 3].map((i) => (
-            <div key={i} className="space-y-2">
-              <div className="h-4 w-full bg-gray-800 rounded animate-pulse" />
-              <div className="h-10 w-full bg-gray-800 rounded animate-pulse" />
-            </div>
-          ))}
-        </div>
-      </CardContent>
-    </Card>
-  ),
-});
+import { LessonSelfAssessment } from "@/components/LessonSelfAssessment";
 import { ProgressBar } from "@/components/ProgressBar";
-import { Confetti } from "@/components/Confetti";
 import { Toast } from "@/components/ui/toast";
 import { getCourse } from "@/lib/courseStore";
 import { getAuthUser } from "@/lib/auth-supabase";
@@ -56,8 +36,7 @@ export default function LearnPage() {
   const params = useParams();
   const courseId = params?.courseId as string;
   const lessonId = params?.lessonId as string;
-  const [quizPassed, setQuizPassed] = useState(false);
-  const [showConfetti, setShowConfetti] = useState(false);
+  const [canContinue, setCanContinue] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [showToast, setShowToast] = useState(false);
   const [watchProgress, setWatchProgress] = useState({ seconds: 0, percent: 0, requiredSeconds: 240 });
@@ -175,15 +154,18 @@ export default function LearnPage() {
     }
   };
 
-  const handleQuizPass = () => {
-    setQuizPassed(true);
-    setShowConfetti(true);
-    setTimeout(() => setShowConfetti(false), 3000);
+  const handleContinue = async () => {
+    setCanContinue(true);
+    // Unlock next lesson
+    if (user && nextLesson) {
+      const lessonIndex = getLessonIndex(lessonId);
+      const { unlockNextLesson } = await import("@/lib/progress");
+      unlockNextLesson(courseId, user.id, lessonIndex);
+    }
   };
 
   return (
     <>
-      {showConfetti && <Confetti />}
       <Toast
         open={showToast}
         onClose={() => setShowToast(false)}
@@ -267,113 +249,33 @@ export default function LearnPage() {
                 
               </div>
 
-              {/* Step 2: Đánh dấu đã xem */}
+              {/* Step 2: Tự đánh giá nhanh */}
               <div>
                 <div className="flex items-center gap-2 mb-4">
                   <div className="w-8 h-8 rounded-full bg-cyan-600 flex items-center justify-center text-sm font-bold">
                     2
                   </div>
-                  <h2 className="text-xl font-semibold">Đánh dấu đã xem</h2>
+                  <h2 className="text-xl font-semibold">Tự đánh giá nhanh</h2>
                 </div>
-                <Card>
-                  <CardContent className="pt-6">
-                    {!isWatched && (
-                      <div className="space-y-4">
-                        {!canMarkAsWatched(lessonId, courseId, user?.id || "") && (
-                          <div className="p-4 rounded-md bg-gray-900 border border-titan-border">
-                            <div className="flex items-start gap-3">
-                              <Clock className="h-5 w-5 text-gray-400 mt-0.5" />
-                              <div className="flex-1">
-                                <p className="text-sm text-gray-300 mb-2">
-                                  Bạn cần xem tối thiểu {Math.ceil(watchProgress.requiredSeconds / 60)} phút (85% thời lượng) để đánh dấu đã xem
-                                </p>
-                                <div className="w-full bg-gray-800 rounded-full h-2">
-                                  <div
-                                    className="bg-gradient-to-r from-cyan-600 to-teal-600 h-2 rounded-full transition-all duration-300"
-                                    style={{ width: `${Math.min(watchProgress.percent, 100)}%` }}
-                                  />
-                                </div>
-                                <p className="text-xs text-gray-500 mt-2">
-                                  Đã xem: {Math.floor(watchProgress.seconds / 60)}:{String(Math.floor(watchProgress.seconds % 60)).padStart(2, "0")} / {Math.floor(watchProgress.requiredSeconds / 60)}:{String(Math.floor(watchProgress.requiredSeconds % 60)).padStart(2, "0")}
-                                </p>
-                              </div>
-                            </div>
-                          </div>
-                        )}
-                        <button
-                          onClick={handleToggleWatched}
-                          disabled={!canMarkAsWatched(lessonId, courseId, user?.id || "")}
-                          className={`w-full flex items-center justify-center gap-3 p-4 rounded-md border transition-colors ${
-                            !canMarkAsWatched(lessonId, courseId, user?.id || "")
-                              ? "opacity-50 cursor-not-allowed border-titan-border bg-titan-card/50"
-                              : isWatched
-                              ? "border-cyan-500 bg-cyan-900/20 text-cyan-400"
-                              : "border-titan-border bg-titan-card hover:border-cyan-400 hover:bg-cyan-900/10"
-                          }`}
-                        >
-                          {isWatched ? (
-                            <>
-                              <CheckCircle2 className="h-5 w-5" />
-                              <span className="font-medium">Đã đánh dấu xem</span>
-                            </>
-                          ) : (
-                            <>
-                              <Circle className="h-5 w-5" />
-                              <span className="font-medium">
-                                {canMarkAsWatched(lessonId, courseId, user?.id || "")
-                                  ? "Bấm để đánh dấu đã xem"
-                                  : "Chưa đủ thời lượng xem"}
-                              </span>
-                            </>
-                          )}
-                        </button>
-                      </div>
-                    )}
-                    {isWatched && (
-                      <div className="text-center py-4">
-                        <CheckCircle2 className="h-8 w-8 text-green-400 mx-auto mb-2" />
-                        <p className="text-sm text-gray-400">Đã đánh dấu xem video</p>
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-              </div>
-
-              {/* Step 3: Làm quiz */}
-              <div>
-                <div className="flex items-center gap-2 mb-4">
-                  <div className="w-8 h-8 rounded-full bg-cyan-600 flex items-center justify-center text-sm font-bold">
-                    3
-                  </div>
-                  <h2 className="text-xl font-semibold">Làm kiểm tra</h2>
-                </div>
-                {isWatched ? (
-                  <QuizPanel
-                    quiz={lesson.quiz}
-                    lessonId={lessonId}
-                    courseId={courseId}
-                    onQuizPass={handleQuizPass}
-                  />
-                ) : (
-                  <Card>
-                    <CardContent className="pt-6 text-center py-12">
-                      <p className="text-gray-400 mb-2">
-                        Vui lòng hoàn thành bước 2 trước
-                      </p>
-                      <p className="text-sm text-gray-500">
-                        Đánh dấu &quot;Đã xem&quot; video để làm kiểm tra
-                      </p>
-                    </CardContent>
-                  </Card>
-                )}
+                <LessonSelfAssessment
+                  lessonId={lessonId}
+                  courseId={courseId}
+                  userId={user?.id || ""}
+                  watchPercent={watchProgress.percent}
+                  watchSeconds={watchProgress.seconds}
+                  requiredSeconds={watchProgress.requiredSeconds}
+                  isWatched={isWatched}
+                  onMarkWatched={handleToggleWatched}
+                  onContinue={handleContinue}
+                />
               </div>
 
               {/* Next Lesson Button */}
-              {quizPassed && nextLesson && (
+              {canContinue && nextLesson && (
                 <div className="text-center">
                   <Link href={`/learn/${courseId}/${nextLesson.id}`}>
                     <Button variant="primary" size="lg">
-                      Bài tiếp theo: {nextLesson.title}
+                      Tiếp tục bài tiếp theo: {nextLesson.title}
                     </Button>
                   </Link>
                 </div>
