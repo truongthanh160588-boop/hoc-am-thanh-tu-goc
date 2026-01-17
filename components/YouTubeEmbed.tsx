@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useCallback, useState } from "react";
+import { useEffect, useRef, useCallback } from "react";
 import { debounce } from "@/lib/debounce";
 
 interface YouTubeEmbedProps {
@@ -13,9 +13,9 @@ export function YouTubeEmbed({ youtubeId, title, onWatchTimeUpdate }: YouTubeEmb
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const playerRef = useRef<any>(null);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
-  const fallbackIntervalRef = useRef<NodeJS.Timeout | null>(null);
-  const [videoDuration, setVideoDuration] = useState<number>(0);
   const lastWatchTimeRef = useRef<number>(0);
+  const startTimeRef = useRef<number>(0);
+  const isPlayingRef = useRef<boolean>(false);
 
   // Debounced update function
   const debouncedUpdate = useCallback(
@@ -29,7 +29,7 @@ export function YouTubeEmbed({ youtubeId, title, onWatchTimeUpdate }: YouTubeEmb
   );
 
   useEffect(() => {
-    // Load YouTube IFrame API
+    // Load YouTube IFrame API (chỉ load 1 lần)
     if (!window.YT) {
       const tag = document.createElement("script");
       tag.src = "https://www.youtube.com/iframe_api";
@@ -37,64 +37,78 @@ export function YouTubeEmbed({ youtubeId, title, onWatchTimeUpdate }: YouTubeEmb
       firstScriptTag.parentNode?.insertBefore(tag, firstScriptTag);
     }
 
-    // Wait for API to load (max 10 seconds)
+    // Wait for API to load và init player
     let checkCount = 0;
     const maxChecks = 100; // 10 seconds max
     const checkYT = setInterval(() => {
       checkCount++;
-      if (window.YT && window.YT.Player) {
+      if (window.YT && window.YT.Player && iframeRef.current && !playerRef.current) {
         clearInterval(checkYT);
         initPlayer();
       } else if (checkCount >= maxChecks) {
-        // Fallback: nếu YouTube API không load được, dùng simple tracking
         clearInterval(checkYT);
-        console.warn("[YouTubeEmbed] YouTube API not loaded, using fallback tracking");
-        startFallbackTracking();
+        console.warn("[YouTubeEmbed] YouTube API not loaded, using simple tracking");
+        // Fallback: track đơn giản dựa trên thời gian page visible
+        startSimpleTracking();
       }
     }, 100);
-    
-    function startFallbackTracking() {
-      // Fallback: track thời gian page visible (đơn giản hơn)
-      let startTime = Date.now();
-      fallbackIntervalRef.current = setInterval(() => {
-        if (document.visibilityState === "visible" && iframeRef.current) {
-          const elapsed = (Date.now() - startTime) / 1000; // seconds
-          // Giả sử video dài 5 phút (300s) nếu chưa biết duration
-          const estimatedDuration = 300;
-          if (onWatchTimeUpdate) {
-            onWatchTimeUpdate(Math.min(elapsed, estimatedDuration), estimatedDuration);
-          }
-        }
-      }, 2000);
-    }
 
     function initPlayer() {
-      if (!iframeRef.current) return;
+      if (!iframeRef.current || playerRef.current) return;
 
-      playerRef.current = new window.YT.Player(iframeRef.current, {
-        videoId: youtubeId,
-        events: {
-          onReady: (event: any) => {
-            const duration = event.target.getDuration();
-            setVideoDuration(duration);
+      try {
+        const containerId = `youtube-player-${youtubeId}`;
+        if (iframeRef.current) {
+          iframeRef.current.id = containerId;
+        }
+
+        playerRef.current = new window.YT.Player(containerId, {
+          videoId: youtubeId,
+          playerVars: {
+            autoplay: 0,
+            controls: 1,
+            rel: 0,
+            modestbranding: 1,
+            enablejsapi: 1,
           },
-          onStateChange: (event: any) => {
-            // YT.PlayerState.PLAYING = 1
-            if (event.data === 1) {
-              startTracking();
-            } else {
-              stopTracking();
-            }
+          events: {
+            onReady: (event: any) => {
+              try {
+                const duration = event.target.getDuration();
+                if (duration > 0) {
+                  console.log(`[YouTubeEmbed] Video duration: ${Math.floor(duration)}s`);
+                }
+              } catch (error) {
+                console.warn("[YouTubeEmbed] Error getting duration:", error);
+              }
+            },
+            onStateChange: (event: any) => {
+              // YT.PlayerState.PLAYING = 1
+              if (event.data === 1) {
+                isPlayingRef.current = true;
+                startTimeRef.current = Date.now();
+                startTracking();
+              } else {
+                isPlayingRef.current = false;
+                stopTracking();
+              }
+            },
+            onError: (event: any) => {
+              console.error("[YouTubeEmbed] Player error:", event.data);
+            },
           },
-        },
-      });
+        });
+      } catch (error) {
+        console.error("[YouTubeEmbed] Error initializing player:", error);
+        startSimpleTracking();
+      }
     }
 
     function startTracking() {
       if (intervalRef.current) clearInterval(intervalRef.current);
 
       intervalRef.current = setInterval(() => {
-        if (playerRef.current && document.visibilityState === "visible") {
+        if (playerRef.current && document.visibilityState === "visible" && isPlayingRef.current) {
           try {
             const currentTime = playerRef.current.getCurrentTime();
             const duration = playerRef.current.getDuration();
@@ -105,16 +119,38 @@ export function YouTubeEmbed({ youtubeId, title, onWatchTimeUpdate }: YouTubeEmb
               }
               // Cũng gọi debounced để tránh quá nhiều update
               debouncedUpdate(currentTime, duration);
-              
-              // Debug log (có thể xóa sau)
-              console.log(`[YouTubeEmbed] Watch time: ${Math.floor(currentTime)}s / ${Math.floor(duration)}s (${Math.floor((currentTime / duration) * 100)}%)`);
             }
           } catch (error) {
             // Player might not be ready
-            console.warn("YouTube player not ready:", error);
+            console.warn("[YouTubeEmbed] Error getting current time:", error);
           }
         }
-      }, 2000); // Update mỗi 2 giây để responsive hơn
+      }, 2000); // Update mỗi 2 giây
+    }
+
+    function startSimpleTracking() {
+      // Fallback: track thời gian page visible khi iframe đang hiển thị
+      if (intervalRef.current) clearInterval(intervalRef.current);
+      
+      let accumulatedTime = 0;
+      let lastCheck = Date.now();
+      
+      intervalRef.current = setInterval(() => {
+        if (document.visibilityState === "visible" && iframeRef.current) {
+          const now = Date.now();
+          const elapsed = (now - lastCheck) / 1000; // seconds
+          accumulatedTime += elapsed;
+          lastCheck = now;
+          
+          // Giả sử video dài 5 phút (300s) nếu chưa biết duration
+          const estimatedDuration = 300;
+          if (onWatchTimeUpdate) {
+            onWatchTimeUpdate(Math.min(accumulatedTime, estimatedDuration), estimatedDuration);
+          }
+        } else {
+          lastCheck = Date.now();
+        }
+      }, 2000);
     }
 
     function stopTracking() {
@@ -125,25 +161,29 @@ export function YouTubeEmbed({ youtubeId, title, onWatchTimeUpdate }: YouTubeEmb
     }
 
     return () => {
+      // KHÔNG destroy player khi unmount để tránh reset video
+      // Chỉ clear interval
       if (intervalRef.current) {
         clearInterval(intervalRef.current);
-      }
-      if (fallbackIntervalRef.current) {
-        clearInterval(fallbackIntervalRef.current);
-      }
-      if (playerRef.current) {
-        try {
-          playerRef.current.destroy();
-        } catch (error) {
-          // Ignore
-        }
+        intervalRef.current = null;
       }
     };
   }, [youtubeId, debouncedUpdate, onWatchTimeUpdate]);
 
+  // Luôn dùng iframe embed thông thường (đơn giản, ổn định)
+  const embedUrl = `https://www.youtube.com/embed/${youtubeId}?rel=0&enablejsapi=1`;
+
   return (
     <div className="w-full aspect-video rounded-lg overflow-hidden border border-titan-border bg-black">
-      <div ref={iframeRef} id={`youtube-player-${youtubeId}`} className="w-full h-full" />
+      <iframe
+        ref={iframeRef}
+        src={embedUrl}
+        title={title || "Video bài học"}
+        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+        allowFullScreen
+        className="w-full h-full"
+        id={`youtube-player-${youtubeId}`}
+      />
     </div>
   );
 }
