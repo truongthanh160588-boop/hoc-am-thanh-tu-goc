@@ -196,7 +196,9 @@ export default function HomePage() {
                 </div>
               </AccordionTrigger>
               <AccordionContent value="item-1">
-                Bạn cần xem bài học và làm quiz đạt ít nhất 80% để mở bài tiếp theo.
+                Khi bạn xem đủ tối thiểu 85% thời lượng video của các bài trong cùng một cụm,
+                hệ thống sẽ cho bạn tự đánh giá mức độ hiểu.
+                Nếu bạn thấy đã hiểu, bài học tiếp theo sẽ được mở.
               </AccordionContent>
             </AccordionItem>
 
@@ -204,11 +206,13 @@ export default function HomePage() {
               <AccordionTrigger value="item-2">
                 <div className="flex items-center gap-2">
                   <HelpCircle className="h-5 w-5 text-cyan-400" />
-                  Có thể làm lại quiz không?
+                  Không hiểu bài thì có bị dừng lại không?
                 </div>
               </AccordionTrigger>
               <AccordionContent value="item-2">
-                Có. Bạn có thể làm lại cho đến khi đạt yêu cầu.
+                Không.
+                Nếu bạn tự đánh giá chưa hiểu rõ, hệ thống sẽ cho đăng ký gọi video Zalo 1–1
+                với Trương Thanh để được hỗ trợ trực tiếp, sau đó vẫn tiếp tục học bình thường.
               </AccordionContent>
             </AccordionItem>
 
@@ -216,12 +220,12 @@ export default function HomePage() {
               <AccordionTrigger value="item-3">
                 <div className="flex items-center gap-2">
                   <HelpCircle className="h-5 w-5 text-cyan-400" />
-                  Khi đi làm gặp sự cố thì làm sao?
+                  Nếu đi làm thực tế gặp sự cố thì xử lý thế nào?
                 </div>
               </AccordionTrigger>
               <AccordionContent value="item-3">
-                Bạn nhắn Zalo kèm hình ảnh/video + thông tin hệ thống,
-                anh Trương Thanh sẽ hỗ trợ trực tiếp cách xử lý.
+                Bạn có thể liên hệ hỗ trợ trực tiếp để được hướng dẫn theo đúng tình huống thực tế.
+                Khóa học không chỉ xem video mà còn đồng hành khi mang kiến thức ra làm thật.
               </AccordionContent>
             </AccordionItem>
 
@@ -229,11 +233,12 @@ export default function HomePage() {
               <AccordionTrigger value="item-4">
                 <div className="flex items-center gap-2">
                   <HelpCircle className="h-5 w-5 text-cyan-400" />
-                  Cần hỗ trợ khác thì làm sao?
+                  Cần hỗ trợ thêm ngoài nội dung bài học thì làm sao?
                 </div>
               </AccordionTrigger>
               <AccordionContent value="item-4">
-                Liên hệ Zalo: 0974 70 4444 để được hỗ trợ trong quá trình học tập.
+                Bạn có thể đăng ký gọi video 1–1 hoặc liên hệ qua Zalo
+                để được Trương Thanh hỗ trợ trực tiếp theo hệ thống đang sử dụng.
               </AccordionContent>
             </AccordionItem>
           </Accordion>
