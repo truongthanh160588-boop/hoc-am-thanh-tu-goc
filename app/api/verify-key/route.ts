@@ -88,14 +88,30 @@ export async function POST(request: NextRequest) {
     if (purchaseError) {
       console.error("[verify-key] Error checking purchase:", purchaseError);
       return NextResponse.json(
-        { ok: false, message: "Lỗi kiểm tra thanh toán" },
+        { ok: false, message: "Lỗi kiểm tra thanh toán. Vui lòng thử lại sau." },
         { status: 500 }
       );
     }
 
     if (!purchase) {
+      // Check if user has pending purchase
+      const { data: pendingPurchase } = await supabase
+        .from("purchases")
+        .select("id, status")
+        .eq("user_id", userId)
+        .eq("course_id", courseId)
+        .eq("status", "pending")
+        .maybeSingle();
+
+      if (pendingPurchase) {
+        return NextResponse.json(
+          { ok: false, message: "Đơn hàng đang chờ admin duyệt. Vui lòng đợi admin xác nhận thanh toán." },
+          { status: 403 }
+        );
+      }
+
       return NextResponse.json(
-        { ok: false, message: "Chưa thanh toán khóa học" },
+        { ok: false, message: "Chưa thanh toán khóa học. Vui lòng đăng ký khóa học trước." },
         { status: 403 }
       );
     }
