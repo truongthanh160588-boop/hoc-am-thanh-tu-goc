@@ -39,7 +39,11 @@ export function ActivationCard({ courseId, onActivated }: ActivationCardProps) {
 
   const handleCopyDeviceId = async () => {
     if (deviceId) {
-      await navigator.clipboard.writeText(deviceId);
+      // Copy normalized Device ID (8 ký tự đầu, uppercase)
+      // Đảm bảo admin tạo key từ cùng format
+      const { normalizeDeviceId } = await import("@/lib/device-id-normalize");
+      const normalizedId = normalizeDeviceId(deviceId);
+      await navigator.clipboard.writeText(normalizedId);
       setShowToast(true);
       setTimeout(() => setShowToast(false), 2000);
     }
@@ -61,8 +65,8 @@ export function ActivationCard({ courseId, onActivated }: ActivationCardProps) {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          deviceId,
-          key: activationKey.trim(),
+          deviceId, // Send full UUID, server will normalize
+          key: activationKey.trim().toUpperCase(), // Normalize key to uppercase
           courseId,
         }),
       });

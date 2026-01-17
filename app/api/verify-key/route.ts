@@ -25,12 +25,25 @@ export const runtime = "nodejs";
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { deviceId, key, courseId } = body;
+    let { deviceId, key, courseId } = body;
 
     // Validate input
     if (!deviceId || !key || !courseId) {
       return NextResponse.json(
         { ok: false, message: "Thiếu thông tin deviceId, key hoặc courseId" },
+        { status: 400 }
+      );
+    }
+
+    // Normalize device ID và key
+    const { normalizeDeviceId, normalizeActivationKey } = await import("@/lib/device-id-normalize");
+    const normalizedDeviceId = normalizeDeviceId(deviceId);
+    const normalizedKey = normalizeActivationKey(key);
+
+    if (!normalizedDeviceId || normalizedDeviceId.length < 8) {
+      console.error("[verify-key] Invalid deviceId format:", deviceId, "→ normalized:", normalizedDeviceId);
+      return NextResponse.json(
+        { ok: false, message: "Device ID không hợp lệ" },
         { status: 400 }
       );
     }
@@ -45,17 +58,32 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Verify HMAC key (case-insensitive comparison)
-    const payload = `${courseId}|${deviceId}|PERM`;
+    // Verify HMAC key với normalized device ID
+    const payload = `${courseId}|${normalizedDeviceId}|PERM`;
     const hmac = crypto.createHmac("sha256", secret);
     hmac.update(payload);
     const signature = hmac.digest("base64url").slice(0, 20);
-    const expectedKey = `HATG-${signature.slice(0, 5)}-${signature.slice(5, 10)}-${signature.slice(10, 15)}-${signature.slice(15, 20)}`;
+    const expectedKey = `HATG-${signature.slice(0, 5).toUpperCase()}-${signature.slice(5, 10).toUpperCase()}-${signature.slice(10, 15).toUpperCase()}-${signature.slice(15, 20).toUpperCase()}`;
 
-    // Compare case-insensitive (user may copy-paste with different case)
-    if (key.toUpperCase() !== expectedKey.toUpperCase()) {
+    // Debug log
+    console.log("[verify-key] Debug:", {
+      receivedDeviceId: deviceId,
+      normalizedDeviceId,
+      receivedKey: key,
+      normalizedKey,
+      expectedKey,
+      match: normalizedKey === expectedKey,
+    });
+
+    // Compare normalized keys (both should be uppercase)
+    if (normalizedKey !== expectedKey) {
+      console.error("[verify-key] Key mismatch:", {
+        received: normalizedKey,
+        expected: expectedKey,
+        deviceId: normalizedDeviceId,
+      });
       return NextResponse.json(
-        { ok: false, message: "Key không hợp lệ" },
+        { ok: false, message: "Key không hợp lệ. Vui lòng kiểm tra lại Device ID và Activation Key." },
         { status: 400 }
       );
     }
@@ -117,7 +145,8 @@ export async function POST(request: NextRequest) {
     }
 
     // Enforce 2 devices: check if device already active (idempotent)
-    const deviceActive = await isDeviceActive({ userId, courseId, deviceId });
+    // Use normalized device ID for DB lookup
+    const deviceActive = await isDeviceActive({ userId, courseId, deviceId: normalizedDeviceId });
     if (deviceActive) {
       return NextResponse.json({
         ok: true,
@@ -137,11 +166,11 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Insert activation bằng service role
+    // Insert activation bằng service role với normalized device ID
     const { data: activation, error: activationError } = await insertActivation({
       userId,
       courseId,
-      deviceId,
+      deviceId: normalizedDeviceId,
     });
 
     if (activationError) {
@@ -162,7 +191,7 @@ export async function POST(request: NextRequest) {
           })
           .eq("user_id", userId)
           .eq("course_id", courseId)
-          .eq("device_id", deviceId);
+          .eq("device_id", normalizedDeviceId);
 
         if (updateError) {
           return NextResponse.json(

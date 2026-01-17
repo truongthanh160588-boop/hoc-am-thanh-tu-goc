@@ -145,10 +145,13 @@ export default function KeyGenPage() {
                 </label>
                 <Input
                   value={deviceId}
-                  onChange={(e) => setDeviceId(e.target.value)}
-                  placeholder="Nhập Device ID từ học viên"
+                  onChange={(e) => setDeviceId(e.target.value.toUpperCase().trim())}
+                  placeholder="Nhập Device ID từ học viên (8 ký tự hoặc UUID)"
                   className="font-mono bg-gray-900 border-titan-border"
                 />
+                <p className="text-xs text-gray-500 mt-1">
+                  Có thể nhập 8 ký tự đầu (1E1681B6) hoặc UUID đầy đủ - hệ thống sẽ tự normalize
+                </p>
               </div>
 
               {/* Error */}

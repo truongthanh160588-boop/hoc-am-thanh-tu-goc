@@ -58,7 +58,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { deviceId, courseId = "audio-goc-01" } = body;
+    let { deviceId, courseId = "audio-goc-01" } = body;
 
     if (!deviceId) {
       return NextResponse.json(
@@ -66,6 +66,20 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
+
+    // Normalize device ID: luôn dùng 8 ký tự đầu (uppercase)
+    // Nếu là UUID đầy đủ → lấy 8 ký tự đầu, nếu không → lấy 8 ký tự đầu
+    const { normalizeDeviceId } = await import("@/lib/device-id-normalize");
+    const normalizedDeviceId = normalizeDeviceId(deviceId);
+    
+    if (!normalizedDeviceId || normalizedDeviceId.length < 8) {
+      return NextResponse.json(
+        { ok: false, message: "Device ID không hợp lệ. Vui lòng nhập đầy đủ Device ID." },
+        { status: 400 }
+      );
+    }
+
+    console.log("[GENERATE-KEY] Original deviceId:", deviceId, "→ Normalized:", normalizedDeviceId);
 
     // Read secret with fallback order
     const secret = process.env.ACTIVATION_SECRET || process.env.NEXT_PUBLIC_ACTIVATION_SECRET || "";
@@ -82,16 +96,18 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Generate key
-    const payload = `${courseId}|${deviceId}|PERM`;
+    // Generate key với normalized device ID
+    const payload = `${courseId}|${normalizedDeviceId}|PERM`;
     const hmac = crypto.createHmac("sha256", secret);
     hmac.update(payload);
     const signature = hmac.digest("base64url").slice(0, 20);
     
-    // Format key: HATG-XXXXX-XXXXX-XXXXX-XXXXX
-    const key = `HATG-${signature.slice(0, 5)}-${signature.slice(5, 10)}-${signature.slice(10, 15)}-${signature.slice(15, 20)}`;
+    // Format key: HATG-XXXXX-XXXXX-XXXXX-XXXXX (uppercase)
+    const key = `HATG-${signature.slice(0, 5).toUpperCase()}-${signature.slice(5, 10).toUpperCase()}-${signature.slice(10, 15).toUpperCase()}-${signature.slice(15, 20).toUpperCase()}`;
 
-    return NextResponse.json({ ok: true, key });
+    console.log("[GENERATE-KEY] Generated key for deviceId:", normalizedDeviceId);
+
+    return NextResponse.json({ ok: true, key, normalizedDeviceId });
   } catch (error: any) {
     console.error("Generate key error:", error);
     return NextResponse.json(
