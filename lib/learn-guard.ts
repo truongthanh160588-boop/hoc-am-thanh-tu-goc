@@ -6,6 +6,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { hasActiveActivation } from "@/lib/activations";
 import { getLessonIndex } from "@/lib/guard";
+import { getCourse } from "@/lib/courseStore";
 
 export interface GuardResult {
   allowed: boolean;
@@ -42,6 +43,19 @@ export async function checkLearnAccess(
   }
 
   const userId = user.id;
+
+  // Check if lesson is preview (allow without purchase/activation)
+  const courseData = getCourse();
+  const lesson = courseData.lessons.find((l) => l.id === lessonId);
+  const isPreview = lesson?.is_preview === true;
+
+  // Preview lessons: only need auth, skip purchase/activation checks
+  if (isPreview) {
+    // Still check lesson unlock for preview (but allow even if not unlocked)
+    return { allowed: true };
+  }
+
+  // Non-preview lessons: require purchase paid + activation
 
   // 2. Check purchase paid
   const { data: purchase, error: purchaseError } = await supabase

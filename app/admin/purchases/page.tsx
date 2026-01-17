@@ -6,13 +6,26 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { getAuthUser } from "@/lib/auth-supabase";
-import { getPendingPurchases, updatePurchaseStatusZalo, type PurchaseZalo } from "@/lib/purchase-zalo";
 import { Toast } from "@/components/ui/toast";
-import { CheckCircle2, XCircle, Clock } from "lucide-react";
+import { CheckCircle2, XCircle, Clock, ExternalLink } from "lucide-react";
+
+interface Purchase {
+  id: string;
+  user_id: string;
+  user_email: string;
+  course_id: string;
+  status: "pending" | "paid" | "rejected";
+  amount_vnd?: number;
+  amount?: number;
+  note?: string;
+  proof_url?: string;
+  created_at: string;
+  updated_at: string;
+}
 
 export default function AdminPurchasesPage() {
   const router = useRouter();
-  const [purchases, setPurchases] = useState<PurchaseZalo[]>([]);
+  const [purchases, setPurchases] = useState<Purchase[]>([]);
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState<{ open: boolean; message: string; type: "success" | "error" }>({
     open: false,
@@ -20,11 +33,6 @@ export default function AdminPurchasesPage() {
     type: "success",
   });
   const [currentUserEmail, setCurrentUserEmail] = useState<string>("");
-
-  // Get admin email from env with fallback order
-  const adminEmail = process.env.NEXT_PUBLIC_ADMIN_EMAIL || process.env.ADMIN_EMAIL || "";
-  const adminEmailsEnv = process.env.NEXT_PUBLIC_ADMIN_EMAILS || process.env.ADMIN_EMAILS;
-  const adminEmails = adminEmailsEnv ? adminEmailsEnv.split(",").map(e => e.trim()) : (adminEmail ? [adminEmail] : ["truongthanh160588@gmail.com"]);
 
   useEffect(() => {
     checkAdmin();
@@ -40,16 +48,25 @@ export default function AdminPurchasesPage() {
 
     setCurrentUserEmail(user.email);
 
-    if (!adminEmails.includes(user.email)) {
-      router.push("/courses");
-      return;
+    // Check admin via API
+    const res = await fetch("/api/admin/purchases?status=pending");
+    if (!res.ok) {
+      if (res.status === 403) {
+        router.push("/courses");
+        return;
+      }
     }
   };
 
   const loadPurchases = async () => {
     try {
-      const pending = await getPendingPurchases();
-      setPurchases(pending);
+      const res = await fetch("/api/admin/purchases?status=pending");
+      if (res.ok) {
+        const data = await res.json();
+        if (data.ok) {
+          setPurchases(data.purchases || []);
+        }
+      }
     } catch (error) {
       console.error("Error loading purchases:", error);
     } finally {
@@ -58,18 +75,29 @@ export default function AdminPurchasesPage() {
   };
 
   const handleApprove = async (purchaseId: string) => {
-    const purchase = purchases.find((p) => p.id === purchaseId);
-    if (!purchase) return;
-
-    const success = await updatePurchaseStatusZalo(purchaseId, "paid", purchase.userEmail);
-    if (success) {
-      setToast({
-        open: true,
-        message: "Đã duyệt đơn hàng",
-        type: "success",
+    try {
+      const res = await fetch("/api/admin/purchases/update", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ purchaseId, status: "paid" }),
       });
-      loadPurchases();
-    } else {
+
+      const data = await res.json();
+      if (data.ok) {
+        setToast({
+          open: true,
+          message: "Đã duyệt đơn hàng",
+          type: "success",
+        });
+        loadPurchases();
+      } else {
+        setToast({
+          open: true,
+          message: data.message || "Có lỗi xảy ra",
+          type: "error",
+        });
+      }
+    } catch (error) {
       setToast({
         open: true,
         message: "Có lỗi xảy ra",
@@ -79,18 +107,29 @@ export default function AdminPurchasesPage() {
   };
 
   const handleReject = async (purchaseId: string) => {
-    const purchase = purchases.find((p) => p.id === purchaseId);
-    if (!purchase) return;
-
-    const success = await updatePurchaseStatusZalo(purchaseId, "rejected", purchase.userEmail);
-    if (success) {
-      setToast({
-        open: true,
-        message: "Đã từ chối đơn hàng",
-        type: "success",
+    try {
+      const res = await fetch("/api/admin/purchases/update", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ purchaseId, status: "rejected" }),
       });
-      loadPurchases();
-    } else {
+
+      const data = await res.json();
+      if (data.ok) {
+        setToast({
+          open: true,
+          message: "Đã từ chối đơn hàng",
+          type: "success",
+        });
+        loadPurchases();
+      } else {
+        setToast({
+          open: true,
+          message: data.message || "Có lỗi xảy ra",
+          type: "error",
+        });
+      }
+    } catch (error) {
       setToast({
         open: true,
         message: "Có lỗi xảy ra",
@@ -170,14 +209,36 @@ export default function AdminPurchasesPage() {
                         {getStatusBadge(purchase.status)}
                       </div>
                       <div className="text-sm text-gray-400 space-y-1">
-                        <p>Email: <span className="text-cyan-400">{purchase.userEmail}</span></p>
-                        <p>Khóa học: {purchase.courseId}</p>
-                        <p>Số tiền: <span className="text-cyan-400 font-semibold">{purchase.amountVnd.toLocaleString("vi-VN")}đ</span></p>
-                        <p>Ngày tạo: {new Date(purchase.createdAt).toLocaleString("vi-VN")}</p>
+                        <p>Email: <span className="text-cyan-400">{purchase.user_email || "N/A"}</span></p>
+                        <p>Khóa học: <span className="text-cyan-400">{purchase.course_id}</span></p>
+                        <p>
+                          Số tiền:{" "}
+                          <span className="text-cyan-400 font-semibold">
+                            {((purchase.amount_vnd || purchase.amount || 0) / 1000).toLocaleString("vi-VN")}đ
+                          </span>
+                        </p>
+                        <p>Ngày tạo: {new Date(purchase.created_at).toLocaleString("vi-VN")}</p>
                         {purchase.note && (
-                          <p>Nội dung/Mã giao dịch: <span className="text-gray-300">{purchase.note}</span></p>
+                          <p>
+                            Nội dung/Mã giao dịch: <span className="text-gray-300">{purchase.note}</span>
+                          </p>
                         )}
-                        <p className="text-xs text-gray-500 mt-2">Mã đơn: <span className="font-mono">{purchase.id}</span></p>
+                        {purchase.proof_url && (
+                          <p>
+                            Ảnh chuyển khoản:{" "}
+                            <a
+                              href={purchase.proof_url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-cyan-400 hover:underline inline-flex items-center gap-1"
+                            >
+                              Xem ảnh <ExternalLink className="h-3 w-3" />
+                            </a>
+                          </p>
+                        )}
+                        <p className="text-xs text-gray-500 mt-2">
+                          Mã đơn: <span className="font-mono">{purchase.id}</span>
+                        </p>
                       </div>
                     </div>
                     {purchase.status === "pending" && (

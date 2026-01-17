@@ -41,17 +41,45 @@ CREATE TABLE IF NOT EXISTS purchases (
   course_id TEXT NOT NULL,
   status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'paid', 'rejected')),
   amount_vnd INTEGER DEFAULT 0,
+  amount NUMERIC DEFAULT 0,
   transaction_code TEXT,
   note TEXT,
+  proof_url TEXT,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  UNIQUE(user_id, course_id)
 );
 
-CREATE INDEX idx_purchases_user_id ON purchases(user_id);
-CREATE INDEX idx_purchases_status ON purchases(status);
+-- Add proof_url column if not exists (migration)
+DO $$ 
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns 
+                 WHERE table_name = 'purchases' AND column_name = 'proof_url') THEN
+    ALTER TABLE purchases ADD COLUMN proof_url TEXT;
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns 
+                 WHERE table_name = 'purchases' AND column_name = 'amount') THEN
+    ALTER TABLE purchases ADD COLUMN amount NUMERIC DEFAULT 0;
+  END IF;
+  -- Add unique constraint if not exists
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'purchases_user_id_course_id_key') THEN
+    ALTER TABLE purchases ADD CONSTRAINT purchases_user_id_course_id_key UNIQUE(user_id, course_id);
+  END IF;
+END $$;
+
+CREATE INDEX IF NOT EXISTS idx_purchases_user_id ON purchases(user_id);
+CREATE INDEX IF NOT EXISTS idx_purchases_status ON purchases(status);
+CREATE INDEX IF NOT EXISTS idx_purchases_course_id ON purchases(course_id);
 
 -- RLS for purchases
 ALTER TABLE purchases ENABLE ROW LEVEL SECURITY;
+
+-- Drop existing policies if they exist
+DROP POLICY IF EXISTS "Users can view own purchases" ON purchases;
+DROP POLICY IF EXISTS "Users can insert own purchases" ON purchases;
+DROP POLICY IF EXISTS "Users can update own purchases" ON purchases;
+DROP POLICY IF EXISTS "Admins can view all purchases" ON purchases;
+DROP POLICY IF EXISTS "Admins can update all purchases" ON purchases;
 
 CREATE POLICY "Users can view own purchases"
   ON purchases FOR SELECT
@@ -59,7 +87,25 @@ CREATE POLICY "Users can view own purchases"
 
 CREATE POLICY "Users can insert own purchases"
   ON purchases FOR INSERT
-  WITH CHECK (auth.uid() = user_id);
+  WITH CHECK (auth.uid() = user_id AND status = 'pending');
+
+CREATE POLICY "Admins can view all purchases"
+  ON purchases FOR SELECT
+  USING (
+    EXISTS (
+      SELECT 1 FROM profiles
+      WHERE profiles.id = auth.uid() AND profiles.role = 'admin'
+    )
+  );
+
+CREATE POLICY "Admins can update all purchases"
+  ON purchases FOR UPDATE
+  USING (
+    EXISTS (
+      SELECT 1 FROM profiles
+      WHERE profiles.id = auth.uid() AND profiles.role = 'admin'
+    )
+  );
 
 -- Admin can view all purchases (will be handled in app logic with service role)
 

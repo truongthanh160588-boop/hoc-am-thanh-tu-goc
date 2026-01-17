@@ -10,6 +10,7 @@ export interface Lesson {
   title: string;
   youtubeId: string;
   quiz: QuizQuestion[];
+  is_preview?: boolean; // Cho phép xem preview mà không cần paid/activation
 }
 
 export interface Course {
@@ -49,6 +50,7 @@ const lessons: Lesson[] = Array.from({ length: 20 }, (_, i) => {
     id: `lesson${String(lessonNum).padStart(2, "0")}`,
     title: `Bài ${String(lessonNum).padStart(2, "0")}: ${titles[i]}`,
     youtubeId: "dQw4w9WgXcQ", // Placeholder - thay sau
+    is_preview: lessonNum <= 3, // 3 bài đầu là preview
     quiz: Array.from({ length: 5 }, (_, q) => ({
       id: `q${q + 1}`,
       question: `Câu hỏi ${q + 1} của bài ${lessonNum}: ${titles[i]}?`,
